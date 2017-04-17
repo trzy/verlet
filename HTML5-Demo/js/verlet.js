@@ -50,8 +50,6 @@ LinkConstraint.prototype.Solve = function()
   var dx = this.body1.x - this.body2.x;
   var dy = this.body1.y - this.body2.y;
   var distance = Length(dx, dy);
-  if (distance <= this.maxLength)
-    return;
   var p1 = this.body2.mass / (this.body1.mass + this.body2.mass);
   var p2 = this.body1.mass / (this.body1.mass + this.body2.mass);
   var adjustment1 = this.stiffness * p1 * (distance - this.maxLength);

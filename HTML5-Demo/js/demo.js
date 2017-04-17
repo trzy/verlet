@@ -20,7 +20,6 @@ function CreateRope(x, y, length, numSegments)
     var link = new LinkConstraint(lastPt, pt, segmentLength, 1);
     pt.AddForce(0, -9.8 * pt.mass);
     pt.AddConstraint(link);
-    lastPt.AddConstraint(link);
     VerletAddObject(pt);
     segments.push(pt);
   }

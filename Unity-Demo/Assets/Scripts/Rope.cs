@@ -7,52 +7,45 @@ public class Rope: MonoBehaviour
   public float ropeLength = 1;
   public int numSegments = 10;
   public bool drawSkinnedMesh = true;
+  public bool drawLines = true;
+  public Material material = null;
   private Verlet.System m_verlet;
   private List<Verlet.IBody> m_bodies;
   private GameObject m_lineObject;
   private LineRenderer m_line;
   private GameObject[] m_capsules;
-  private SkinnedMeshRenderer m_mesh;
+  private SkinnedMeshRenderer m_skinnedMesh;
+  private Mesh m_mesh;
 
   private void Update()
   {
     m_verlet.Update(Time.deltaTime);
-    for (int i = 0; i < m_bodies.Count; i++)
+
+    if (drawLines)
     {
-      m_line.SetPosition(i, m_bodies[i].position);
+      for (int i = 0; i < m_bodies.Count; i++)
+      {
+        m_line.SetPosition(i, m_bodies[i].position);
+      }
     }
 
     if (drawSkinnedMesh)
     {
-      /*
-      for (int i = 0; i < m_bodies.Count; i ++)
-      {
-        int boneIdx = m_mesh.bones.Length - 1 - i;
-        m_mesh.bones[boneIdx].position = m_bodies[i].position;
-        if (boneIdx < m_mesh.bones.Length - 1)
-        {
-          Vector3 newUp = (m_mesh.bones[boneIdx + 1].position - m_mesh.bones[boneIdx].position).normalized;
-          Quaternion rotation = m_mesh.bones[boneIdx].rotation;
-          rotation.SetFromToRotation(m_mesh.bones[boneIdx + 1].right, newUp);
-          m_mesh.bones[boneIdx].rotation = rotation;
-        }
-      }
-      */
       for (int i = 0; i < m_bodies.Count; i++)
       {
-        int boneIdx = m_mesh.bones.Length - 1 - i;
-        m_mesh.bones[boneIdx].position = m_bodies[i].position;
-        if (boneIdx < m_mesh.bones.Length - 1)
+        m_skinnedMesh.bones[i].position = m_bodies[i].position;
+        if (i > 0)
         {
-          Vector3 newUp = (m_mesh.bones[boneIdx + 1].position - m_mesh.bones[boneIdx].position).normalized;
-          Quaternion rotation = m_mesh.bones[boneIdx].rotation;
-          rotation.SetFromToRotation(m_mesh.bones[boneIdx + 1].right, newUp);
-          //m_mesh.bones[boneIdx].rotation = rotation;
+          Vector3 newUp = (m_skinnedMesh.bones[i - 1].position - m_skinnedMesh.bones[i].position).normalized;
+          Quaternion rotation = m_skinnedMesh.bones[i].rotation;
+          rotation.SetFromToRotation(m_skinnedMesh.bones[i].right, newUp);
+          //m_mesh.bones[i].rotation = rotation;
         }
       }
       return;
     }
 
+    // Draw capsules
     for (int i = 0; i < m_bodies.Count - 1; i++)
     {
       m_capsules[i].transform.position = 0.5f * (m_bodies[i].position + m_bodies[i + 1].position);
@@ -63,7 +56,103 @@ public class Rope: MonoBehaviour
     }
   }
 
-  private void CreateGeometry()
+  private void CreateSkinnedMesh()
+  {
+    // Generate a ring for each node. We will later connect adjacent rings to
+    // form triangles. Pivot point is top of rope and we move downwards.
+    List<Vector3> verts = new List<Vector3>();
+    List<BoneWeight> weights = new List<BoneWeight>();
+    float radius = 1;
+    float segmentLength = ropeLength / numSegments;
+    int numSides = 100;
+    int vertIdx = 0;
+    for (int i = 0; i < numSegments; i++)
+    {
+      float y = -i * segmentLength;
+      for (int j = 0; j < numSides; j++)
+      {
+        // Create vertex
+        float angle = j * (360f / numSides) * Mathf.Deg2Rad;
+        float x = radius * Mathf.Cos(angle);
+        float z = radius * Mathf.Sin(angle);
+        verts.Add(new Vector3(x, y, z));
+
+        // Assign weight
+        BoneWeight weight = new BoneWeight();
+        weight.boneIndex0 = i;
+        weight.weight0 = 1;
+        weight.boneIndex1 = 0;
+        weight.weight1 = 0;
+        weight.boneIndex2 = 0;
+        weight.weight2 = 0;
+        weight.boneIndex3 = 0;
+        weight.weight3 = 0;
+        weights.Add(weight);
+
+        vertIdx += 1;
+      }
+    }
+
+    // Connect adjacent rings with triangles
+    List<int> tris = new List<int>();
+    int vertsPerRing = numSides;
+    vertIdx = 0;
+    for (int i = 0; i < numSegments - 1; i++)
+    {
+      // Each pair of vertices around the ring is connected with the level
+      // below it to form a quad comprised of two triangles
+      for (int j = 0; j < vertsPerRing; j++)
+      {
+        int topLeft = vertIdx + 0 + j;
+        int topRight = vertIdx + (1 + j) % vertsPerRing;
+        int bottomLeft = topLeft + vertsPerRing;
+        int bottomRight = topRight + vertsPerRing;
+        tris.Add(topLeft);
+        tris.Add(bottomRight);
+        tris.Add(bottomLeft);
+        tris.Add(topLeft);
+        tris.Add(topRight);
+        tris.Add(bottomRight);
+      }
+      vertIdx += vertsPerRing;
+    }
+
+    // Create mesh
+    m_skinnedMesh = gameObject.AddComponent<SkinnedMeshRenderer>();
+    m_skinnedMesh.enabled = drawSkinnedMesh;
+    m_mesh = new Mesh();
+    m_mesh.vertices = verts.ToArray();
+    m_mesh.triangles = tris.ToArray();
+    m_mesh.RecalculateNormals();
+    m_mesh.boneWeights = weights.ToArray();
+
+    // Create bones
+    Transform[] bones = new Transform[numSegments];
+    Matrix4x4[] bindPoses = new Matrix4x4[numSegments];
+    for (int i = 0; i < numSegments; i++)
+    {
+      bones[i] = new GameObject("Bone" + i).transform;
+      bones[i].parent = transform;
+      bones[i].localRotation = Quaternion.identity;
+      bones[i].localPosition = new Vector3(0, -i * segmentLength, 0);
+
+      // Bind pose is inverse transform matrix
+      bindPoses[i] = bones[i].worldToLocalMatrix * transform.localToWorldMatrix;
+    }
+
+    // Hook up bones and mesh
+    m_mesh.bindposes = bindPoses;
+    m_skinnedMesh.bones = bones;
+    m_skinnedMesh.sharedMesh = m_mesh;
+    m_skinnedMesh.sharedMaterial = material;
+  }
+
+  private void OnDestroy()
+  {
+    Object.Destroy(m_mesh);
+  }
+
+  private void CreateCapsules()
   {
     if (drawSkinnedMesh)
       return;
@@ -80,8 +169,6 @@ public class Rope: MonoBehaviour
   {
     m_verlet = new Verlet.System();
     m_bodies = new List<Verlet.IBody>();
-    m_mesh = GetComponentInChildren<SkinnedMeshRenderer>();    
-    m_mesh.enabled = drawSkinnedMesh;
 
     // Construct rope with anchor assumed to be at pivot of this object
     Verlet.Anchor anchor = new Verlet.Anchor(transform);
@@ -91,9 +178,9 @@ public class Rope: MonoBehaviour
     for (int i = 1; i < numSegments; i++)
     {
       Verlet.IBody point;
-      if (i == numSegments - 1)
-        point = new Verlet.Anchor(anchor.position + 0.25f * Vector3.right);
-      else
+      //if (i == numSegments - 1)
+      //  point = new Verlet.Anchor(anchor.position + 0.25f * Vector3.right);
+      //else
         point = new Verlet.PointMass(transform.position - segmentLength * transform.up * i, 1);
       Verlet.IBody lastPoint = m_bodies[m_bodies.Count - 1];
       Verlet.IConstraint link = new Verlet.LinkConstraint(lastPoint, point, segmentLength, 1f);
@@ -111,8 +198,12 @@ public class Rope: MonoBehaviour
     m_line.startColor = Color.red;
     m_line.endColor = Color.red;
     m_line.positionCount = numSegments;
+    //m_line.material = material;
 
-    // Geometry-based visualization
-    CreateGeometry();
+    // Capsule-based visualization
+    CreateCapsules();
+
+    // Skinned mesh
+    CreateSkinnedMesh();
   }
 }

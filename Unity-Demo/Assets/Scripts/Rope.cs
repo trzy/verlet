@@ -6,6 +6,7 @@ public class Rope: MonoBehaviour
 {
   public float ropeLength = 1;
   public int numSegments = 10;
+  public Joint connectedJoint = null;
   public bool drawSkinnedMesh = true;
   public bool drawLines = true;
   public Material material = null;
@@ -64,9 +65,10 @@ public class Rope: MonoBehaviour
     List<BoneWeight> weights = new List<BoneWeight>();
     float radius = 1;
     float segmentLength = ropeLength / numSegments;
+    int numBones = numSegments + 1; // need one extra bone to cap the end
     int numSides = 100;
     int vertIdx = 0;
-    for (int i = 0; i < numSegments; i++)
+    for (int i = 0; i < numBones; i++)
     {
       float y = -i * segmentLength;
       for (int j = 0; j < numSides; j++)
@@ -97,7 +99,7 @@ public class Rope: MonoBehaviour
     List<int> tris = new List<int>();
     int vertsPerRing = numSides;
     vertIdx = 0;
-    for (int i = 0; i < numSegments - 1; i++)
+    for (int i = 0; i < numBones - 1; i++)
     {
       // Each pair of vertices around the ring is connected with the level
       // below it to form a quad comprised of two triangles
@@ -127,9 +129,9 @@ public class Rope: MonoBehaviour
     m_mesh.boneWeights = weights.ToArray();
 
     // Create bones
-    Transform[] bones = new Transform[numSegments];
-    Matrix4x4[] bindPoses = new Matrix4x4[numSegments];
-    for (int i = 0; i < numSegments; i++)
+    Transform[] bones = new Transform[numBones];
+    Matrix4x4[] bindPoses = new Matrix4x4[numBones];
+    for (int i = 0; i < numBones; i++)
     {
       bones[i] = new GameObject("Bone" + i).transform;
       bones[i].parent = transform;
@@ -175,12 +177,14 @@ public class Rope: MonoBehaviour
     m_verlet.AddBody(anchor);
     m_bodies.Add(anchor);
     float segmentLength = ropeLength / numSegments;
-    for (int i = 1; i < numSegments; i++)
+    int numPoints = numSegments + 1;
+    for (int i = 1; i < numPoints; i++)
     {
       Verlet.IBody point;
-      //if (i == numSegments - 1)
-      //  point = new Verlet.Anchor(anchor.position + 0.25f * Vector3.right);
-      //else
+      if (connectedJoint && i == numPoints - 1)
+        point = new Verlet.Anchor(connectedJoint);
+        //point = new Verlet.Anchor(anchor.position + 0.25f * Vector3.right);
+      else
         point = new Verlet.PointMass(transform.position - segmentLength * transform.up * i, 1);
       Verlet.IBody lastPoint = m_bodies[m_bodies.Count - 1];
       Verlet.IConstraint link = new Verlet.LinkConstraint(lastPoint, point, segmentLength, 1f);
@@ -191,14 +195,17 @@ public class Rope: MonoBehaviour
     }
 
     // Debug line renderer
-    m_lineObject = new GameObject("line");
-    m_line = m_lineObject.AddComponent<LineRenderer>();
-    m_line.startWidth = .01f;
-    m_line.endWidth = .01f;
-    m_line.startColor = Color.red;
-    m_line.endColor = Color.red;
-    m_line.positionCount = numSegments;
-    //m_line.material = material;
+    if (drawLines)
+    {
+      m_lineObject = new GameObject("line");
+      m_line = m_lineObject.AddComponent<LineRenderer>();
+      m_line.startWidth = .01f;
+      m_line.endWidth = .01f;
+      m_line.startColor = Color.red;
+      m_line.endColor = Color.red;
+      m_line.positionCount = numSegments;
+      //m_line.material = material;
+    }
 
     // Capsule-based visualization
     CreateCapsules();

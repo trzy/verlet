@@ -49,7 +49,9 @@ namespace Verlet
   public class Anchor: IBody
   {
     private Transform m_transform;
-    
+    private Vector3 m_position;
+    private List<IConstraint> m_constraints;
+
     public float mass
     {
       //TODO: mass should be infinite but we need to rework PointMass solver to use inverted masses in order for that to work
@@ -59,12 +61,16 @@ namespace Verlet
 
     public Vector3 position
     {
-      get { return m_transform.position; }
+      get { return m_transform ? m_transform.position : m_position; }
       set { }
     }
 
     public void Update(float deltaTime)
     {
+      foreach (IConstraint constraint in m_constraints)
+      {
+        constraint.Solve();
+      }
     }
 
     public void AddForce(Vector3 force)
@@ -73,12 +79,21 @@ namespace Verlet
 
     public void AddConstraint(IConstraint constraint)
     {
+      m_constraints.Add(constraint);
+    }
+
+    public Anchor(Vector3 p)
+    {
+      m_transform = null;
+      m_position = p;
+      m_constraints = new List<IConstraint>();
     }
 
     public Anchor(Transform anchoredTo)
     {
       m_transform = anchoredTo;
       position = anchoredTo.position;
+      m_constraints = new List<IConstraint>();
     }
   }
 
@@ -146,6 +161,7 @@ namespace Verlet
       m_timeLeftOver = deltaTime - numWholeSteps * timeStep;
       for (int step = 0; step < numWholeSteps; step++)
       {
+        //TODO: solve constraints separately and iterate?
         foreach (IBody body in m_bodies)
         {
           body.Update(timeStep);

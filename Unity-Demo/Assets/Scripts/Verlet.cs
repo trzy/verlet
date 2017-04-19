@@ -13,6 +13,7 @@ namespace Verlet
     float mass { get; set; }
     Vector3 position { get; set; }
     void Update(float deltaTime);
+    void SolveConstraints();
     void AddForce(Vector3 force);
     void AddConstraint(IConstraint constraint);
   }
@@ -46,11 +47,34 @@ namespace Verlet
     }
   }
 
-  public class Anchor: IBody
+  public class ConstraintSolver
+  {
+    private List<IConstraint> m_constraints;
+
+    public void SolveConstraints()
+    {
+      foreach (IConstraint constraint in m_constraints)
+      {
+        constraint.Solve();
+      }
+    }
+
+    public void AddConstraint(IConstraint constraint)
+    {
+      m_constraints.Add(constraint);
+    }
+
+    public ConstraintSolver()
+    {
+      m_constraints = new List<IConstraint>();
+    }
+  }
+
+  public class Anchor: ConstraintSolver, IBody
   {
     private Transform m_transform;
+    private Joint m_joint;
     private Vector3 m_position;
-    private List<IConstraint> m_constraints;
 
     public float mass
     {
@@ -61,49 +85,50 @@ namespace Verlet
 
     public Vector3 position
     {
-      get { return m_transform ? m_transform.position : m_position; }
+      get { return m_position; }
       set { }
     }
 
     public void Update(float deltaTime)
     {
-      foreach (IConstraint constraint in m_constraints)
-      {
-        constraint.Solve();
-      }
+      if (m_transform)
+        m_position = m_transform.position;
+      else if (m_joint)
+        m_position = m_joint.gameObject.transform.TransformPoint(m_joint.anchor);
     }
 
     public void AddForce(Vector3 force)
     {
     }
 
-    public void AddConstraint(IConstraint constraint)
-    {
-      m_constraints.Add(constraint);
-    }
-
     public Anchor(Vector3 p)
     {
       m_transform = null;
+      m_joint = null;
       m_position = p;
-      m_constraints = new List<IConstraint>();
     }
 
     public Anchor(Transform anchoredTo)
     {
       m_transform = anchoredTo;
-      position = anchoredTo.position;
-      m_constraints = new List<IConstraint>();
+      m_joint = null;
+      m_position = anchoredTo.position;
+    }
+
+    public Anchor(Joint anchoredTo)
+    {
+      m_transform = null;
+      m_joint = anchoredTo;
+      m_position = m_joint.gameObject.transform.TransformPoint(m_joint.anchor);
     }
   }
 
-  public class PointMass: IBody
+  public class PointMass: ConstraintSolver, IBody
   {
     private Vector3 m_position;
     private Vector3 m_lastPosition;
     private Vector3 m_acceleration = Vector3.zero;
     private float m_mass;
-    private List<IConstraint> m_constraints;
 
     public float mass
     {
@@ -123,10 +148,6 @@ namespace Verlet
       Vector3 nextPosition = m_position + (m_position - m_lastPosition) + m_acceleration * deltaTime2;
       m_lastPosition = m_position;
       m_position = nextPosition;
-      foreach (IConstraint constraint in m_constraints)
-      {
-        constraint.Solve();
-      }
     }
 
     public void AddForce(Vector3 force)
@@ -134,17 +155,11 @@ namespace Verlet
       m_acceleration += force / mass;
     }
 
-    public void AddConstraint(IConstraint constraint)
-    {
-      m_constraints.Add(constraint);
-    }
-
     public PointMass(Vector3 p, float m)
     {
       position = p;
       m_lastPosition = p;
       mass = m;
-      m_constraints = new List<IConstraint>();
     }
   }
 
@@ -155,13 +170,20 @@ namespace Verlet
 
     public void Update(float timeSinceLastCalled)
     {
+      int constraintIterations = 1;
       float timeStep = 1 / 120f;
       float deltaTime = timeSinceLastCalled + m_timeLeftOver;
       int numWholeSteps = Mathf.FloorToInt(deltaTime / timeStep);
       m_timeLeftOver = deltaTime - numWholeSteps * timeStep;
       for (int step = 0; step < numWholeSteps; step++)
       {
-        //TODO: solve constraints separately and iterate?
+        for (int i = 0; i < constraintIterations; i++)
+        {
+          foreach (IBody body in m_bodies)
+          {
+            body.SolveConstraints();
+          }
+        }
         foreach (IBody body in m_bodies)
         {
           body.Update(timeStep);
@@ -172,6 +194,7 @@ namespace Verlet
     public void AddBody(IBody body)
     {
       m_bodies.Add(body);
+      Debug.Log("Added body at " + body.position.ToString("F3"));
     }
 
     public System()

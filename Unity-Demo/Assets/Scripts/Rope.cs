@@ -82,8 +82,8 @@ public class Rope: MonoBehaviour
 
   private void CreateSkinnedMesh()
   {
-    // Generate a ring for each node. We will later connect adjacent rings to
-    // form triangles. Pivot point is top of rope and we move downwards.
+    // Generate a ring for each node. We will later connect adjacent rings with
+    // quads to form sides. Pivot point is top of rope and we move downwards.
     List<Vector3> verts = new List<Vector3>();
     List<BoneWeight> weights = new List<BoneWeight>();
     float radius = 1;
@@ -119,9 +119,8 @@ public class Rope: MonoBehaviour
         }
       }
     }
-    
 
-    // Connect adjacent rings with triangles
+    // Connect adjacent rings with quads
     List<int> tris = new List<int>();
     int vertsPerRing = numberOfSides;
     vertIdx = 0;

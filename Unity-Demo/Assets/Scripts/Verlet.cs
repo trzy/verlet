@@ -99,10 +99,10 @@ namespace Verlet
 
     public void Update(float deltaTime)
     {
-      if (m_transform)
+      if (m_joint)
+        m_position = m_transform.TransformPoint(m_joint.anchor);
+      else if (m_transform)
         m_position = m_transform.position;
-      else if (m_joint)
-        m_position = m_joint.gameObject.transform.TransformPoint(m_joint.anchor);
     }
 
     public void AddForce(Vector3 force)
@@ -125,9 +125,9 @@ namespace Verlet
 
     public Anchor(Joint anchoredTo)
     {
-      m_transform = null;
+      m_transform = anchoredTo.gameObject.transform;
       m_joint = anchoredTo;
-      m_position = m_joint.gameObject.transform.TransformPoint(m_joint.anchor);
+      m_position = m_transform.TransformPoint(m_joint.anchor);
     }
   }
 

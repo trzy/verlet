@@ -1,7 +1,7 @@
 /*
  * verlet.js
  * Bart Trzynadlowski
- * 2017.04.16
+ * 2017.04.20
  *
  * Verlet integrator-based physics engine.
  */
@@ -116,12 +116,6 @@ PointMass.prototype.Update = function(deltaTime)
   this.vx = nextVX;
   this.vy = nextVY;
   */
-  
-  // Constraints
-  for (var i = 0; i < this.constraints.length; i++)
-  {
-    this.constraints[i].Solve();
-  }
 }
 
 PointMass.prototype.Draw = function(ctx)
@@ -186,12 +180,23 @@ function Update(canvas, OnUpdateComplete)
   var ctx = canvas.getContext("2d");
 
   // Update physics
-  var timeStep = 1 / 200;
+  var constraintIterations = 3;
+  var timeStep = 1 / 60;
   var deltaTime = 1e-3 * (now - g_lastFrameTimeMS) + g_timeLeftOverLastFrame;
   var numWholeSteps = Math.floor(deltaTime / timeStep);
   g_timeLeftOverLastFrame = deltaTime - numWholeSteps * timeStep;
   for (var step = 0; step < numWholeSteps; step++)
   {
+    for (var j = 0; j < constraintIterations; j++)
+    {
+      for (var i = 0; i < g_objects.length; i++)
+      {
+        for (let constraint of g_objects[i].constraints)
+        {
+          constraint.Solve();
+        }
+      }
+    }
     for (var i = 0; i < g_objects.length; i++)
     {
       g_objects[i].Update(timeStep);

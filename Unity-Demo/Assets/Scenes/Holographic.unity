@@ -254,10 +254,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0febfac1b19285542b01a2279aa4e5b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ropeLength: 0.1
+  ropeLength: 0.12
   numSegments: 15
   solverFrequency: 60
-  solverIterations: 3
+  solverIterations: 4
   connectedJoint: {fileID: 1249031610}
   connectToBone: 0
   drawSkinnedMesh: 1
@@ -322,7 +322,7 @@ ConfigurableJoint:
     spring: 1000000
     damper: 0
   m_LinearLimit:
-    limit: 0.1
+    limit: 0.19
     bounciness: 0
     contactDistance: 0
   m_AngularXLimitSpring:

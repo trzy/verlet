@@ -24,7 +24,6 @@ namespace Verlet
     private IBody m_body1;
     private IBody m_body2;
     private float m_maxLength;
-    private float m_stiffness;
     private float m_p1;
     private float m_p2;
 
@@ -44,7 +43,6 @@ namespace Verlet
       m_body1 = body1;
       m_body2 = body2;
       m_maxLength = length;
-      m_stiffness = stiffness;
 
       // Precompute
       m_p1 = stiffness * (1 / body1.mass) / ((1 / body1.mass) + (1 / body2.mass));

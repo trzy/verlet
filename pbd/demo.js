@@ -4,18 +4,18 @@ var g_gravity = 1200;
 
 function CreateRope(x, y, length, numSegments)
 {
-  var anchor = new AnchorBody(x, y, 1);
-  PBDAddBody(anchor);
+  var anchor = new AnchorVertex(x, y, 1);
+  PBDAddVertex(anchor);
 
   // Create N bodies
   var segments = [ anchor ];
   var segmentLength = length / numSegments;
   for (var i = 0; i < numSegments; i++)
   {
-    var body = new Body(x + (i + 1) * segmentLength, y, 1);
-    body.AddForce(0, -g_gravity * body.mass);
-    PBDAddBody(body);
-    segments.push(body);
+    var vertex = new Vertex(x + (i + 1) * segmentLength, y, 1);
+    vertex.AddForce(0, -g_gravity * vertex.mass);
+    PBDAddVertex(vertex);
+    segments.push(vertex);
   }
 
   // Make the end of the rope heavy
@@ -25,10 +25,10 @@ function CreateRope(x, y, length, numSegments)
   var kStiffness = 1;
   for (var i = 0; i < numSegments; i++)
   {
-    var body1 = segments[i + 0];
-    var body2 = segments[i + 1];
-    var distance = Math.abs(body1.Position().x - body2.Position().x);
-    var constraint = new DistanceConstraint(kStiffness, body1, body2, distance);
+    var vertex1 = segments[i + 0];
+    var vertex2 = segments[i + 1];
+    var distance = Math.abs(vertex1.Position().x - vertex2.Position().x);
+    var constraint = new DistanceConstraint(kStiffness, vertex1, vertex2, distance);
     PBDAddConstraint(constraint);
   }
 }
@@ -45,7 +45,7 @@ function CreateFabric(x, y, width, height, numSegmentsX, numSegmentsY)
     points[i] = [];
     for (var j = 0; j < numSegmentsX; j++)
     {
-      var pt = new Body(x + j * segmentWidth, y - i * segmentHeight, 1);
+      var pt = new Vertex(x + j * segmentWidth, y - i * segmentHeight, 1);
       if (j > 0)
       {
         var leftPt = points[i][points[i].length - 1];
@@ -155,5 +155,4 @@ function Demo()
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
   PBDStart(OnUpdateComplete);
-  console.log(g_bodies);
 }

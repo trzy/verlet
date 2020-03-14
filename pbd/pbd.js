@@ -1,11 +1,9 @@
-//TODO: Remove anchor bodies and use an equality constraint?
-
 function Length(dx, dy)
 {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-function Body(x, y, mass)
+function Vertex(x, y, mass)
 {
   this.x = new Vector3(x, y, 0);
   this.p = new Vector3(x, y, 0);
@@ -15,60 +13,60 @@ function Body(x, y, mass)
   this.w = 1.0 / mass;
 }
 
-Body.prototype.Position = function()
+Vertex.prototype.Position = function()
 {
   return this.x.Copy();
 }
 
-Body.prototype.ProjectedPosition = function()
+Vertex.prototype.ProjectedPosition = function()
 {
   return this.p.Copy();
 }
 
-Body.prototype.Velocity = function()
+Vertex.prototype.Velocity = function()
 {
   return this.v.Copy();
 }
 
-Body.prototype.SetMass = function(mass)
+Vertex.prototype.SetMass = function(mass)
 {
   this.mass = mass;
   this.w = 1.0 / mass;
 }
 
-Body.prototype.SetVelocity = function(velocity)
+Vertex.prototype.SetVelocity = function(velocity)
 {
   this.v = velocity.Copy();
 }
 
-Body.prototype.AddForce = function(fx, fy)
+Vertex.prototype.AddForce = function(fx, fy)
 {
   var f = new Vector3(fx, fy, 0);
   this.a = Add(this.a, Mult(this.w, f));
 }
 
-Body.prototype.AddAcceleration = function(ax, ay)
+Vertex.prototype.AddAcceleration = function(ax, ay)
 {
   this.a = Add(this.a, new Vector3(ax, ay, 0));
 }
 
-Body.prototype.UpdateVelocity = function(timeStep)
+Vertex.prototype.UpdateVelocity = function(timeStep)
 {
   this.v = Add(this.v, Mult(this.a, timeStep));
 }
 
-Body.prototype.IntegrateVelocity = function(timeStep)
+Vertex.prototype.IntegrateVelocity = function(timeStep)
 {
   this.p = Add(this.x, Mult(this.v, timeStep));
 }
 
-Body.prototype.FinalizeState = function(timeStep)
+Vertex.prototype.FinalizeState = function(timeStep)
 {
   this.v = Mult(Sub(this.p, this.x), 1.0 / timeStep); // v = (p - x) / timeStep
   this.x = this.p.Copy();
 }
 
-Body.prototype.Draw = function(ctx)
+Vertex.prototype.Draw = function(ctx)
 {
   var position = this.x;
   ctx.beginPath();
@@ -80,7 +78,7 @@ Body.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
-function AnchorBody(x, y)
+function AnchorVertex(x, y)
 {
   this.x = new Vector3(x, y, 0);
   this.p = new Vector3(x, y, 0);
@@ -90,17 +88,17 @@ function AnchorBody(x, y)
   this.w = 0;
 }
 
-AnchorBody.prototype = new Body();
+AnchorVertex.prototype = new Vertex();
 
-AnchorBody.prototype.AddForce = function(fx, fy)
+AnchorVertex.prototype.AddForce = function(fx, fy)
 {
 }
 
-AnchorBody.prototype.AddAcceleration = function(ax, ay)
+AnchorVertex.prototype.AddAcceleration = function(ax, ay)
 {
 }
 
-AnchorBody.prototype.UpdateVelocity = function(timeStep)
+AnchorVertex.prototype.UpdateVelocity = function(timeStep)
 {
 }
 
@@ -116,10 +114,10 @@ Constraint.prototype.Draw = function(ctx)
 {
 }
 
-function DistanceConstraint(k, body1, body2, distance)
+function DistanceConstraint(k, vertex1, vertex2, distance)
 {
-  this.body1 = body1;
-  this.body2 = body2;
+  this.vertex1 = vertex1;
+  this.vertex2 = vertex2;
   this.k = k;
   this.distance = distance;
 }
@@ -130,10 +128,10 @@ DistanceConstraint.prototype.Project = function(numSolverIterations)
 {
   var k = 1 - Math.pow(1 - this.k, 1 / numSolverIterations);
 
-  var w1 = this.body1.w;
-  var w2 = this.body2.w;
+  var w1 = this.vertex1.w;
+  var w2 = this.vertex2.w;
 
-  var deltaP12 = Sub(this.body1.p, this.body2.p);
+  var deltaP12 = Sub(this.vertex1.p, this.vertex2.p);
   var lengthP12 = deltaP12.Magnitude();
 
   var s = (lengthP12 - this.distance) / lengthP12;
@@ -143,23 +141,23 @@ DistanceConstraint.prototype.Project = function(numSolverIterations)
   var deltaP1 = Mult(s1, deltaP12);
   var deltaP2 = Mult(s2, deltaP12);
 
-  this.body1.p = Add(this.body1.p, Mult(deltaP1, k));
-  this.body2.p = Add(this.body2.p, Mult(deltaP2, k));
+  this.vertex1.p = Add(this.vertex1.p, Mult(deltaP1, k));
+  this.vertex2.p = Add(this.vertex2.p, Mult(deltaP2, k));
 }
 
 DistanceConstraint.prototype.Draw = function(ctx)
 {
-  var y1 = ctx.canvas.height - this.body1.Position().y;
-  var y2 = ctx.canvas.height - this.body2.Position().y;
-  var dx = this.body2.Position().x - this.body1.Position().x;
+  var y1 = ctx.canvas.height - this.vertex1.Position().y;
+  var y2 = ctx.canvas.height - this.vertex2.Position().y;
+  var dx = this.vertex2.Position().x - this.vertex1.Position().x;
   var dy = y2 - y1;
   var delta = new Vector3(dx, dy, 0);
   var mag = delta.Magnitude();
   var nx = dx / mag;
   var ny = dy / mag;
   ctx.beginPath();
-  ctx.moveTo(this.body1.Position().x + nx * 4, y1 + ny * 4);
-  ctx.lineTo(this.body2.Position().x - nx * 4, y2 - ny * 4);
+  ctx.moveTo(this.vertex1.Position().x + nx * 4, y1 + ny * 4);
+  ctx.lineTo(this.vertex2.Position().x - nx * 4, y2 - ny * 4);
   ctx.lineWidth = 1;
   ctx.strokeStyle = "#000";
   ctx.stroke();
@@ -174,31 +172,31 @@ var g_lastScheduledFrameHandle;
 var g_lastFrameTimeMS;
 var g_timeLeftOverLastFrame = 0;
 var g_timeElapsed = 0;
-var g_bodies = [];
+var g_vertices = [];
 var g_constraints = [];
 
 function DampVelocities(kDamping)
 {
-  // Exclude bodies with non-finite mass (e.g., anchor bodies) or w == 0, which are not
+  // Exclude vertices with non-finite mass (e.g., anchor vertices) or w == 0, which are not
   // part of the dynamic body
-  var bodies = g_bodies.filter(body => body.w != 0 && isFinite(body.mass));
+  var vertices = g_vertices.filter(vertex => vertex.w != 0 && isFinite(vertex.mass));
 
-  var mass = bodies.reduce((sum, body) => sum + body.mass, 0);
+  var mass = vertices.reduce((sum, vertex) => sum + vertex.mass, 0);
   var w = 1.0 / mass;
 
-  var xcm = Mult(w, bodies.reduce((sum, body) => Add(sum, Mult(body.mass, body.Position())), Vector3.Zero()));  // xcm = Sum(x_i * m_i) / Sum(m_i)
-  var vcm = Mult(w, bodies.reduce((sum, body) => Add(sum, Mult(body.mass, body.Velocity())), Vector3.Zero()));  // vcm = Sum(v_i * m_i) / Sum(m_i)
+  var xcm = Mult(w, vertices.reduce((sum, vertex) => Add(sum, Mult(vertex.mass, vertex.Position())), Vector3.Zero()));  // xcm = Sum(x_i * m_i) / Sum(m_i)
+  var vcm = Mult(w, vertices.reduce((sum, vertex) => Add(sum, Mult(vertex.mass, vertex.Velocity())), Vector3.Zero()));  // vcm = Sum(v_i * m_i) / Sum(m_i)
 
   var r = [];
-  for (let body of bodies)
+  for (let vertex of vertices)
   {
-    r.push(Sub(body.Position(), xcm));
+    r.push(Sub(vertex.Position(), xcm));
   }
 
   var L = Vector3.Zero();
   for (var i = 0; i < r.length; i++)
   {
-    var Li = Cross(r[i], Mult(bodies[i].mass, bodies[i].Velocity()));
+    var Li = Cross(r[i], Mult(vertices[i].mass, vertices[i].Velocity()));
     L = Add(L, Li);
   }
 
@@ -207,7 +205,7 @@ function DampVelocities(kDamping)
   {
     var r$ = r[i].CrossMatrix();
     var rrt = Mult(r$, r$.Transpose());
-    var Ii = Mult(bodies[i].mass, rrt);
+    var Ii = Mult(vertices[i].mass, rrt);
     I = Add(I, Ii);
   }
 
@@ -217,11 +215,11 @@ function DampVelocities(kDamping)
   for (var i = 0; i < r.length; i++)
   {
     // TODO: when deltaVcm == 0, Iinv matrix does not exist and we should have vi unaffected
-    var deltaVcm = Sub(vcm, bodies[i].Velocity());
+    var deltaVcm = Sub(vcm, vertices[i].Velocity());
     var deltaVangular = Cross(omega, r[i]);
     var deltaV = Add(deltaVcm, deltaVangular);
-    var newVelocity = Add(bodies[i].Velocity(), Mult(kDamping, deltaV));
-    bodies[i].SetVelocity(newVelocity);
+    var newVelocity = Add(vertices[i].Velocity(), Mult(kDamping, deltaV));
+    vertices[i].SetVelocity(newVelocity);
   }
 }
 
@@ -239,16 +237,16 @@ function Update(canvas, OnUpdateComplete)
 
   for (var step = 0; step < numWholeSteps; step++)
   {
-    for (let body of g_bodies)
+    for (let vertex of g_vertices)
     {
-      body.UpdateVelocity(timeStep);
+      vertex.UpdateVelocity(timeStep);
     }
 
     DampVelocities(0.1);
 
-    for (let body of g_bodies)
+    for (let vertex of g_vertices)
     {
-      body.IntegrateVelocity(timeStep);
+      vertex.IntegrateVelocity(timeStep);
     }
 
     for (var i = 0; i < solverIterations; i++)
@@ -259,9 +257,9 @@ function Update(canvas, OnUpdateComplete)
       }
     }
 
-    for (let body of g_bodies)
+    for (let vertex of g_vertices)
     {
-      body.FinalizeState(timeStep);
+      vertex.FinalizeState(timeStep);
     }
 
     g_timeElapsed += timeStep;
@@ -274,9 +272,9 @@ function Update(canvas, OnUpdateComplete)
   ctx.fillStyle = "#000";
   ctx.fillText(g_fps.toFixed(1), 20, 20);
 
-  for (let body of g_bodies)
+  for (let vertex of g_vertices)
   {
-    body.Draw(ctx);
+    vertex.Draw(ctx);
   }
 
   for (let constraint of g_constraints)
@@ -304,17 +302,17 @@ function UpdateFPS()
 
 function FindObjectAt(x, y)
 {
-  for (var i = 0; i < g_bodies.length; i++)
+  for (var i = 0; i < g_vertices.length; i++)
   {
-    if (g_bodies[i].Selected(x, y))
-      return g_bodies[i];
+    if (g_vertices[i].Selected(x, y))
+      return g_vertices[i];
   }
   return null;
 }
 
-function PBDAddBody(body)
+function PBDAddVertex(vertex)
 {
-  g_bodies.push(body);
+  g_vertices.push(vertex);
 }
 
 function PBDAddConstraint(constraint)

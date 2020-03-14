@@ -7,60 +7,62 @@ function Length(dx, dy)
 
 function Body(x, y, mass)
 {
-  this.x = x;
-  this.y = y;
-  this.px = x;
-  this.py = y;
-  this.ax = 0;
-  this.ay = 0;
-  this.vx = 0;
-  this.vy = 0;
+  this.x = new Vector3(x, y, 0);
+  this.p = new Vector3(x, y, 0);
+  this.a = Vector3.Zero();
+  this.v = Vector3.Zero();
   this.mass = mass;
   this.w = 1.0 / mass;
 }
 
+Body.prototype.Position = function()
+{
+  return this.x;
+}
+
+Body.prototype.ProjectedPosition = function()
+{
+  return this.p;
+}
+
 Body.prototype.SetMass = function(mass)
 {
+  this.mass = mass;
   this.w = 1.0 / mass;
 }
 
 Body.prototype.AddForce = function(fx, fy)
 {
-  this.ax = this.ax + fx / this.mass;
-  this.ay = this.ay + fy / this.mass;
+  var f = new Vector3(fx, fy, 0);
+  this.a = Add(this.a, Mult(this.w, f));
 }
 
 Body.prototype.AddAcceleration = function(ax, ay)
 {
-  this.ax = this.ax + ax;
-  this.ay = this.ay + ay;
+  this.a = Add(this.a, new Vector3(ax, ay, 0));
 }
 
 Body.prototype.UpdateVelocity = function(timeStep)
 {
-  this.vx = this.vx + this.ax * timeStep;
-  this.vy = this.vy + this.ay * timeStep;
+  this.v = Add(this.v, Mult(this.a, timeStep));
 }
 
 Body.prototype.IntegrateVelocity = function(timeStep)
 {
-  this.px = this.x + this.vx * timeStep;
-  this.py = this.y + this.vy * timeStep;
+  this.p = Add(this.x, Mult(this.v, timeStep));
 }
 
 Body.prototype.FinalizeState = function(timeStep)
 {
-  this.vx = (this.px - this.x) / timeStep;
-  this.vy = (this.py - this.y) / timeStep;
-  
-  this.x = this.px;
-  this.y = this.py;
+  this.v = Mult(Sub(this.p, this.x), 1.0 / timeStep); // v = (p - x) / timeStep
+  this.x = this.p.Copy();
 }
 
 Body.prototype.Draw = function(ctx)
 {
+  var position = this.x;
   ctx.beginPath();
-  ctx.arc(this.x, ctx.canvas.height - this.y, 4, 0, 360);
+  ctx.arc(position.x, ctx.canvas.height - position.y, 4, 0, 360);
   ctx.fillStyle = "#fff";
   ctx.fill();
   ctx.lineWidth = 1;
@@ -70,14 +72,10 @@ Body.prototype.Draw = function(ctx)
 
 function AnchorBody(x, y)
 {
-  this.x = x;
-  this.y = y;
-  this.px = x;
-  this.py = y;
-  this.ax = 0;
-  this.ay = 0;
-  this.vx = 0;
-  this.vy = 0;
+  this.x = new Vector3(x, y, 0);
+  this.p = new Vector3(x, y, 0);
+  this.a = Vector3.Zero();
+  this.v = Vector3.Zero();
   this.mass = Infinity;
   this.w = 0;
 }
@@ -100,9 +98,8 @@ function Constraint()
 {
 }
 
-Constraint.prototype.Project = function(px, py)
+Constraint.prototype.Project = function(numSolverIterations)
 {
-  return {x: 0, y: 0 };
 }
 
 Constraint.prototype.Draw = function(ctx)
@@ -125,40 +122,34 @@ DistanceConstraint.prototype.Project = function(numSolverIterations)
 
   var w1 = this.body1.w;
   var w2 = this.body2.w;
-  
-  var dx = this.body1.px - this.body2.px;
-  var dy = this.body1.py - this.body2.py;
-  var pMag = Length(dx, dy);
-  
-  var s = (pMag - this.distance) / pMag;
+
+  var deltaP12 = Sub(this.body1.p, this.body2.p);
+  var lengthP12 = deltaP12.Magnitude();
+
+  var s = (lengthP12 - this.distance) / lengthP12;
   var s1 = (-w1 / (w1 + w2)) * s
   var s2 = (w2 / (w1 + w2)) * s;
-  
-  var dpx1 = s1 * dx;
-  var dpy1 = s1 * dy;
-  
-  var dpx2 = s2 * dx;
-  var dpy2 = s2 * dy;
-  
-  this.body1.px = this.body1.px + dpx1 * k;
-  this.body1.py = this.body1.py + dpy1 * k;
-  
-  this.body2.px = this.body2.px + dpx2 * k;
-  this.body2.py = this.body2.py + dpy2 * k;
+
+  var deltaP1 = Mult(s1, deltaP12);
+  var deltaP2 = Mult(s2, deltaP12);
+
+  this.body1.p = Add(this.body1.p, Mult(deltaP1, k));
+  this.body2.p = Add(this.body2.p, Mult(deltaP2, k));
 }
 
 DistanceConstraint.prototype.Draw = function(ctx)
 {
-  var y1 = ctx.canvas.height - this.body1.y;
-  var y2 = ctx.canvas.height - this.body2.y;
-  var dx = this.body2.x - this.body1.x;
+  var y1 = ctx.canvas.height - this.body1.Position().y;
+  var y2 = ctx.canvas.height - this.body2.Position().y;
+  var dx = this.body2.Position().x - this.body1.Position().x;
   var dy = y2 - y1;
-  var mag = Length(dx, dy);
+  var delta = new Vector3(dx, dy, 0);
+  var mag = delta.Magnitude();
   var nx = dx / mag;
   var ny = dy / mag;
   ctx.beginPath();
-  ctx.moveTo(this.body1.x + nx * 4, y1 + ny * 4);
-  ctx.lineTo(this.body2.x - nx * 4, y2 - ny * 4);
+  ctx.moveTo(this.body1.Position().x + nx * 4, y1 + ny * 4);
+  ctx.lineTo(this.body2.Position().x - nx * 4, y2 - ny * 4);
   ctx.lineWidth = 1;
   ctx.strokeStyle = "#000";
   ctx.stroke();
@@ -176,9 +167,10 @@ var g_timeElapsed = 0;
 var g_bodies = [];
 var g_constraints = [];
 
+//TODO: what about external constraints with w=0? Probably should not be included.
 function DampVelocities()
 {
-  
+
 }
 
 function Update(canvas, OnUpdateComplete)
@@ -197,11 +189,11 @@ function Update(canvas, OnUpdateComplete)
   {
     for (let body of g_bodies)
     {
-      body.UpdateVelocity(timeStep); 
+      body.UpdateVelocity(timeStep);
     }
-    
-    // DampVelocities();  <-- what about external constraints with w=0? Probably should not be included.
-    
+
+    DampVelocities();
+
     for (let body of g_bodies)
     {
       body.IntegrateVelocity(timeStep);
@@ -214,7 +206,7 @@ function Update(canvas, OnUpdateComplete)
         constraint.Project(solverIterations);
       }
     }
-    
+
     for (let body of g_bodies)
     {
       body.FinalizeState(timeStep);
@@ -239,7 +231,7 @@ function Update(canvas, OnUpdateComplete)
   {
     constraint.Draw(ctx);
   }
-  
+
   // Callback
   OnUpdateComplete(ctx);
 

@@ -17,6 +17,22 @@ function Vector3(x, y, z)
     this.y = y;
     this.z = z;
   }
+  
+  this.Copy = function()
+  {
+    return new Vector3(this);
+  }
+
+  this.Magnitude = function()
+  {
+    return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+  }
+ 
+}
+
+Vector3.Zero = function()
+{
+  return new Vector3();
 }
 
 function Matrix3(other)
@@ -72,6 +88,15 @@ function Add(a, b)
   if ((a instanceof Vector3) && (b instanceof Vector3))
   {
     return new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
+  }
+  return undefined;
+}
+
+function Sub(a, b)
+{
+  if ((a instanceof Vector3) && (b instanceof Vector3))
+  {
+    return new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
   }
   return undefined;
 }

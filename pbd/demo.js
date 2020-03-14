@@ -27,7 +27,7 @@ function CreateRope(x, y, length, numSegments)
   {
     var body1 = segments[i + 0];
     var body2 = segments[i + 1];
-    var distance = Math.abs(body1.x - body2.x);
+    var distance = Math.abs(body1.Position().x - body2.Position().x);
     var constraint = new DistanceConstraint(kStiffness, body1, body2, distance);
     PBDAddConstraint(constraint);
   }

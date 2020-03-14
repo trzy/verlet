@@ -17,18 +17,28 @@ function Body(x, y, mass)
 
 Body.prototype.Position = function()
 {
-  return this.x;
+  return this.x.Copy();
 }
 
 Body.prototype.ProjectedPosition = function()
 {
-  return this.p;
+  return this.p.Copy();
+}
+
+Body.prototype.Velocity = function()
+{
+  return this.v.Copy();
 }
 
 Body.prototype.SetMass = function(mass)
 {
   this.mass = mass;
   this.w = 1.0 / mass;
+}
+
+Body.prototype.SetVelocity = function(velocity)
+{
+  this.v = velocity.Copy();
 }
 
 Body.prototype.AddForce = function(fx, fy)
@@ -167,10 +177,52 @@ var g_timeElapsed = 0;
 var g_bodies = [];
 var g_constraints = [];
 
-//TODO: what about external constraints with w=0? Probably should not be included.
-function DampVelocities()
+function DampVelocities(kDamping)
 {
+  // Exclude bodies with non-finite mass (e.g., anchor bodies) or w == 0, which are not
+  // part of the dynamic body
+  var bodies = g_bodies.filter(body => body.w != 0 && isFinite(body.mass));
 
+  var mass = bodies.reduce((sum, body) => sum + body.mass, 0);
+  var w = 1.0 / mass;
+
+  var xcm = Mult(w, bodies.reduce((sum, body) => Add(sum, Mult(body.mass, body.Position())), Vector3.Zero()));  // xcm = Sum(x_i * m_i) / Sum(m_i)
+  var vcm = Mult(w, bodies.reduce((sum, body) => Add(sum, Mult(body.mass, body.Velocity())), Vector3.Zero()));  // vcm = Sum(v_i * m_i) / Sum(m_i)
+
+  var r = [];
+  for (let body of bodies)
+  {
+    r.push(Sub(body.Position(), xcm));
+  }
+
+  var L = Vector3.Zero();
+  for (var i = 0; i < r.length; i++)
+  {
+    var Li = Cross(r[i], Mult(bodies[i].mass, bodies[i].Velocity()));
+    L = Add(L, Li);
+  }
+
+  var I = Matrix3.Zero();
+  for (var i = 0; i < r.length; i++)
+  {
+    var r$ = r[i].CrossMatrix();
+    var rrt = Mult(r$, r$.Transpose());
+    var Ii = Mult(bodies[i].mass, rrt);
+    I = Add(I, Ii);
+  }
+
+  var Iinv = I.Inverse();
+  var omega = Mult(Iinv, L);
+
+  for (var i = 0; i < r.length; i++)
+  {
+    // TODO: when deltaVcm == 0, Iinv matrix does not exist and we should have vi unaffected
+    var deltaVcm = Sub(vcm, bodies[i].Velocity());
+    var deltaVangular = Cross(omega, r[i]);
+    var deltaV = Add(deltaVcm, deltaVangular);
+    var newVelocity = Add(bodies[i].Velocity(), Mult(kDamping, deltaV));
+    bodies[i].SetVelocity(newVelocity);
+  }
 }
 
 function Update(canvas, OnUpdateComplete)
@@ -192,7 +244,7 @@ function Update(canvas, OnUpdateComplete)
       body.UpdateVelocity(timeStep);
     }
 
-    DampVelocities();
+    DampVelocities(0.1);
 
     for (let body of g_bodies)
     {

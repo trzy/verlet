@@ -17,10 +17,10 @@ function CreateRope(x, y, length, numSegments)
     PBDAddBody(body);
     segments.push(body);
   }
-  
+
   // Make the end of the rope heavy
   segments[segments.length - 1].SetMass(10);
- 
+
   // Create N constraints: 1 external (the first one), N-1 internal
   var kStiffness = 1;
   for (var i = 0; i < numSegments; i++)
@@ -138,16 +138,16 @@ function Demo()
 {
   var i = Mult(Matrix3.Identity(), new Vector3(1, 2, 3));
   console.log("i =", i);
-  
+
   var x = Matrix3.Zero();
   x.m[0] = [ 1, 2, 3 ];
   x.m[1] = [ 4, 5, 6 ];
   x.m[2] = [ 7, 8, 9 ];
   console.log("t =", x.T());
-  
+
   console.log("v =", Mult(-1, new Vector3(1, 2, 3)));
-  
-  
+
+
   $("#Viewport").mousemove(OnMouseMove);
   $("#Viewport").mousedown(OnMouseDown);
   $("#Viewport").mouseup(OnMouseUp);
@@ -156,4 +156,4 @@ function Demo()
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
   PBDStart(OnUpdateComplete);
   console.log(g_bodies);
-}  
+}

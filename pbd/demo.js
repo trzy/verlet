@@ -1,11 +1,12 @@
 //TODO: rigid box and colliders?
 
 var g_gravity = 1200;
+var g_engine = new Engine();
 
 function CreateRope(x, y, length, numSegments)
 {
   var anchor = new AnchorVertex(x, y, 1);
-  PBDAddVertex(anchor);
+  g_engine.AddVertex(anchor);
 
   // Create N bodies
   var segments = [ anchor ];
@@ -14,7 +15,7 @@ function CreateRope(x, y, length, numSegments)
   {
     var vertex = new Vertex(x + (i + 1) * segmentLength, y, 1);
     vertex.AddForce(0, -g_gravity * vertex.mass);
-    PBDAddVertex(vertex);
+    g_engine.AddVertex(vertex);
     segments.push(vertex);
   }
 
@@ -29,7 +30,7 @@ function CreateRope(x, y, length, numSegments)
     var vertex2 = segments[i + 1];
     var distance = Math.abs(vertex1.Position().x - vertex2.Position().x);
     var constraint = new DistanceConstraint(kStiffness, vertex1, vertex2, distance);
-    PBDAddConstraint(constraint);
+    g_engine.AddConstraint(constraint);
   }
 }
 
@@ -103,7 +104,7 @@ function OnMouseDown(event)
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
   var y = canvas.height - event.offsetY;
-  g_selectedObject = FindObjectAt(x, y);
+  g_selectedObject = g_engine.FindObjectAt(x, y);
   if (g_selectedObject)
   {
     g_selectedPinConstraint = new PinConstraint(g_selectedObject, x, y);
@@ -154,5 +155,6 @@ function Demo()
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
-  PBDStart(OnUpdateComplete);
+  g_engine.Start(OnUpdateComplete);
+  g_engine.physicsEnabled = true;
 }

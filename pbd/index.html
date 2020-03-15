@@ -7,8 +7,9 @@
     <script type="text/javascript" src="math.js"></script>
     <script type="text/javascript" src="pbd.js"></script>
     <script type="text/javascript" src="engine.js"></script>
+    <script type="text/javascript" src="edit.js"></script>
     <script type="text/javascript" src="demo.js"></script>
-    <script type="text/javascript">    
+    <script type="text/javascript">
       $(document).ready(function() { Demo(); });
     </script>
     <title>Position-Based Dynamics Engine Demo</title>
@@ -18,8 +19,9 @@
     <p>Source code: [ <a href="pbd.js" target="_blank">pbd.js</a> ] [ <a href="demo.js" target="_blank">demo.js</a> ] </p>
     <button id="PauseButton" type="button">Pause</button>
     <button id="StepButton" type="button" disabled="true">Step</button>
-    <button id="CreateButton" type="button" disabled="true">Create</button>
-    <select id="ObjectList">
+    <button id="NewBodyButton" type="button">New Body</button>
+    <span>Create:</span>
+    <select id="CreationOperation">
       <option value="Vertex">Vertex</option>
       <option value="Constraint">Constraint</option>
     </select>

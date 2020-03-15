@@ -1,3 +1,16 @@
+/*
+ * math.js
+ *
+ * Math routines and data structure.
+ */
+
+
+/*
+ * Vector3:
+ *
+ * A 3-dimensional vector.
+ */
+
 function Vector3(x, y, z)
 {
   this.x = 0;
@@ -38,12 +51,43 @@ function Vector3(x, y, z)
     c.m[2] = [ -v.y, v.x, 0 ];
     return c;
   }
+
+  this.IsFinite = function()
+  {
+    return isFinite(this.x) && isFinite(this.y) && isFinite(this.z);
+  }
 }
 
 Vector3.Zero = function()
 {
   return new Vector3();
 }
+
+Vector3.Dot = function(u, v)
+{
+  return u.x * v.x + u.y * v.y + u.z * v.z;
+}
+
+Vector3.Cross = function(u, v)
+{
+  var x = u.y * v.z - u.z * v.y;
+  var y = -(u.x * v.z - u.z * v.x);
+  var z = u.x * v.y - u.y * v.x;
+  return new Vector3(x, y, z);
+}
+
+Vector3.Distance = function(u, v)
+{
+  var delta = Sub(u, v);
+  return Math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+}
+
+
+/*
+ * Matrix3:
+ *
+ * A 3x3 matrix.
+ */
 
 function Matrix3(other)
 {
@@ -105,6 +149,19 @@ function Matrix3(other)
 
     return Mult(1.0 / this.Determinant(), inv);
   }
+
+  this.IsFinite = function()
+  {
+    for (var y = 0; y < 3; y++)
+    {
+      if (true == this.m.reduce((sum, element) => sum || !isFinite(element), false))
+      {
+        // Is *not* finite
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 Matrix3.Identity = function()
@@ -120,6 +177,12 @@ Matrix3.Zero = function()
   z.m[2][2] = 0.0;
   return z;
 }
+
+
+/*
+ * Algebraic operations that operate on combinations of matrices, vectors, and
+ * scalars.
+ */
 
 function Add(a, b)
 {
@@ -216,17 +279,4 @@ function Mult(a, b)
   }
 
   return undefined;
-}
-
-function Dot(u, v)
-{
-  return u.x * v.x + u.y * v.y + u.z * v.z;
-}
-
-function Cross(u, v)
-{
-  var x = u.y * v.z - u.z * v.y;
-  var y = -(u.x * v.z - u.z * v.x);
-  var z = u.x * v.y - u.y * v.x;
-  return new Vector3(x, y, z);
 }

@@ -1,10 +1,17 @@
+/*
+ * engine.js
+ *
+ * Manages canvas rendering at a variable frame rate and physics simulation at
+ * a fixed time step.
+ */
+
 function Engine(physicsSystem)
 {
   this.physicsEnabled = false;
   this.runPhysicsSteps = 0; // used when physics are disabled
-  
+
   var m_physicsSystem = physicsSystem
-  
+
   var m_frameNumber = 0;
   var m_fps = 0;
   var m_fpsCounterHandle;
@@ -13,9 +20,9 @@ function Engine(physicsSystem)
   var m_lastScheduledFrameHandle;
   var m_lastFrameTimeMS;
   var m_timeLeftOverLastFrame = 0;
-  
+
   var self = this;
-  
+
   function UpdateFPS()
   {
     var now = Date.now();
@@ -35,16 +42,16 @@ function Engine(physicsSystem)
     var deltaTime = 1e-3 * (now - m_lastFrameTimeMS) + m_timeLeftOverLastFrame;
     var numWholeSteps = Math.floor(deltaTime / timeStep);
     m_timeLeftOverLastFrame = deltaTime - numWholeSteps * timeStep;
-    
+
     if (m_physicsSystem)
     {
       numWholeSteps = self.physicsEnabled ? numWholeSteps : self.runPhysicsSteps;
-      
+
       for (var step = 0; step < numWholeSteps; step++)
-      {   
+      {
         m_physicsSystem.Update(timeStep);
       }
-      
+
       if (!self.physicsEnabled)
       {
         self.runPhysicsSteps = 0;
@@ -74,7 +81,7 @@ function Engine(physicsSystem)
     m_frameNumber += 1;
     m_lastScheduledFrameHandle = window.requestAnimationFrame(function() { Update(canvas, OnUpdateComplete) });
   }
-  
+
   this.Start = function(OnUpdateComplete)
   {
     var canvas = document.getElementById("Viewport");
@@ -87,7 +94,7 @@ function Engine(physicsSystem)
       m_fpsCounterLastFrame = m_frameNumber;
     }
   }
-  
+
   this.Stop = function()
   {
     if (m_lastScheduledFrameHandle)
@@ -95,7 +102,7 @@ function Engine(physicsSystem)
       window.cancelAnimationFrame(m_lastScheduledFrameHandle);
       m_lastScheduledFrameHandle = undefined;
     }
-    
+
     if (m_fpsCounterHandle)
     {
       window.clearInterval(m_fpsCounterHandle);

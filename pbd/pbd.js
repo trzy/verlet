@@ -34,6 +34,12 @@ Vertex.prototype.SetMass = function(mass)
   this.w = 1.0 / mass;
 }
 
+Vertex.prototype.SetPosition = function(position)
+{
+  this.x = position.Copy();
+  this.p = position.Copy();
+}
+
 Vertex.prototype.SetVelocity = function(velocity)
 {
   this.v = velocity.Copy();
@@ -209,6 +215,16 @@ function Body()
   {
     m_vertices.push(vertex);
   }
+
+  this.FindVertexAt = function(x, y)
+  {
+    for (let vertex of m_vertices)
+    {
+      if (vertex.HitTest(x, y))
+        return vertex;
+    }
+    return null;
+  }
 }
 
 function PBDSystem()
@@ -318,14 +334,14 @@ function PBDSystem()
     m_physicsTimeElapsed += timeStep;
   }
 
-  this.FindObjectAt = function(x, y)
+  this.FindVertexAt = function(x, y)
   {
     for (let body of m_bodies)
     {
-      for (let vertex of body.Vertices())
+      var vertex = body.FindVertexAt(x, y);
+      if (vertex)
       {
-        if (vertex.HitTest(x, y))
-          return vertex;
+        return vertex;
       }
     }
     return null;

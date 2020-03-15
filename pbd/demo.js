@@ -98,13 +98,25 @@ var g_selectedPinConstraint;
 
 var g_newBody;
 var g_newConstraints = [];
+var g_currentConstraint;
+var g_fakeEndpointVertex = new Vertex(0, 0, 1); // never gets added to a body; just used to render endpoint of constraint in progress
 
 function OnMouseMove(event)
 {
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
   var y = canvas.height - event.offsetY;
-  g_highlightedObject = g_physics.FindObjectAt(x, y);
+  g_highlightedObject = g_physics.FindVertexAt(x, y);
+  if (!g_highlightedObject && g_newBody)
+  {
+    g_highlightedObject = g_newBody.FindVertexAt(x, y);
+  }
+
+  // If constraint in progress
+  if (g_currentConstraint)
+  {
+    g_fakeEndpointVertex.SetPosition(new Vector3(x, y, 0));
+  }
 /*
   if (g_selectedObject)
   {
@@ -119,7 +131,7 @@ function OnMouseDown(event)
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
   var y = canvas.height - event.offsetY;
-  
+
   // If editing a body...
   if (g_newBody)
   {
@@ -132,10 +144,36 @@ function OnMouseDown(event)
     }
     else if (createWhat == "Constraint")
     {
-      //var constraint = DistanceConstraint()
+      var vertex = g_highlightedObject;
+
+      if (g_currentConstraint)
+      {
+        // A constraint is in progress...
+        if (vertex)
+        {
+          // Clicked on a different vertex. Finalize constraint.
+          g_currentConstraint.vertex2 = vertex;
+          g_currentConstraint.distance = Sub(g_currentConstraint.vertex1.Position(), g_currentConstraint.vertex2.Position()).Magnitude();
+          g_currentConstraint = undefined;
+        }
+        else
+        {
+          // Clicked on nothing or same endpoint. Undo constraint.
+          g_newConstraints.pop();
+          g_currentConstraint = null;
+        }
+      }
+      else if (vertex)
+      {
+        // New constraint
+        var k = 1;
+        g_currentConstraint = new DistanceConstraint(k, vertex, g_fakeEndpointVertex, 0);
+        g_fakeEndpointVertex.SetPosition(vertex.Position());
+        g_newConstraints.push(g_currentConstraint);
+      }
     }
   }
-  
+
   /*
   g_selectedObject = g_engine.FindObjectAt(x, y);
   if (g_selectedObject)
@@ -159,6 +197,18 @@ function OnMouseUp(event)
 
 function OnUpdateComplete(ctx)
 {
+  // Draw new body in progress
+  var drawables = g_newConstraints.slice();
+  if (g_newBody)
+  {
+    drawables = drawables.concat(g_newBody.Vertices());
+  }
+  for (let drawable of drawables)
+  {
+    drawable.Draw(ctx);
+  }
+
+  // Highlighted object
   if (g_highlightedObject)
   {
     ctx.beginPath();
@@ -168,15 +218,6 @@ function OnUpdateComplete(ctx)
     ctx.lineWidth = 1;
     ctx.strokeStyle = "#000";
     ctx.stroke();
-  }
-  
-  // Draw new body
-  if (g_newBody)
-  {
-    for (let drawable of g_newBody.Vertices())
-    {
-      drawable.Draw(ctx);
-    }
   }
 }
 
@@ -195,13 +236,22 @@ function OnPauseButtonPressed()
     $("#PauseButton").html("Pause");
     $("#CreateButton").prop("disabled", true);
     g_engine.physicsEnabled = true;
-    
+
     // Commit body if one was being created
+    //TODO: cancel current constraint if one in progress
     if (g_newBody && g_newBody.Vertices().length > 0)
     {
       g_physics.AddBody(g_newBody);
     }
     g_newBody = undefined;
+
+    // Any any constraints
+    for (let constraint of g_newConstraints)
+    {
+      g_physics.AddConstraint(constraint);
+    }
+    g_newConstraints = [];
+    g_currentConstraint = undefined;
   }
 }
 
@@ -212,7 +262,10 @@ function OnStepButtonPressed()
 
 function OnCreateButtonPressed()
 {
+  //TODO: refactor constraint cancelation into a cancel function
   g_newBody = new Body();
+  g_newConstraints = []
+  g_currentConstraint = undefined;
 }
 
 function Demo()

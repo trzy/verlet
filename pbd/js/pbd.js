@@ -117,6 +117,15 @@ Vertex.prototype.HitTest = function(x, y)
   return radius <= 10;
 }
 
+
+/*
+ * AnchorVertex:
+ *
+ * A special vertex with infinite mass that does not move, as described in the
+ * paper. Unfortunately, these cannot be linked with distance constraints,
+ * therefore, using AnchorConstraint is the preferred way to pin vertics.
+ */
+
 function AnchorVertex(x, y)
 {
   this.x = new Vector3(x, y, 0);
@@ -126,15 +135,6 @@ function AnchorVertex(x, y)
   this.mass = Infinity;
   this.w = 0;
 }
-
-
-/*
- * AnchorVertex:
- *
- * A special vertex with infinite mass that does not move, as described in the
- * paper. Unfortunately, these cannot be linked with distance constraints,
- * therefore, using AnchorConstraint is the preferred way to pin vertics.
- */
 
 AnchorVertex.prototype = new Vertex();
 

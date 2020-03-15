@@ -155,6 +155,11 @@ function Constraint()
   this.priority = 1;
 }
 
+Constraint.prototype.IsAttachedToBody = function(body)
+{
+  return false;
+}
+
 Constraint.prototype.Project = function(numSolverIterations)
 {
 }
@@ -181,6 +186,18 @@ function DistanceConstraint(k, vertex1, vertex2, distance)
 }
 
 DistanceConstraint.prototype = new Constraint();
+
+DistanceConstraint.prototype.IsAttachedToBody = function(body)
+{
+  for (let vertex of body.Vertices())
+  {
+    if (vertex == this.vertex1 || vertex == this.vertex2)
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
 DistanceConstraint.prototype.Project = function(numSolverIterations)
 {
@@ -236,6 +253,18 @@ function AnchorConstraint(vertex, x, y)
 }
 
 AnchorConstraint.prototype = new Constraint();
+
+AnchorConstraint.prototype.IsAttachedToBody = function(body)
+{
+  for (let vertex of body.Vertices())
+  {
+    if (vertex == this.vertex)
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
 AnchorConstraint.prototype.Project = function(numSolverIterations)
 {
@@ -426,6 +455,13 @@ function PBDSystem()
   this.AddBody = function(body)
   {
     m_bodies.push(body);
+  }
+  
+  this.RemoveBody = function(body)
+  {
+    // Remove any constraints containing body
+    m_constraints = m_constraints.filter(existingConstraint => !existingConstraint.IsAttachedToBody(body));
+    m_bodies = m_bodies.filter(existingBody => existingBody != body);
   }
 
   this.AddConstraint = function(constraint)

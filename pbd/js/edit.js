@@ -1,5 +1,6 @@
 /*
  * edit.js
+ * Bart Trzynadlowski, 2020
  *
  * EditOperation interface and concrete implementations. These handle editing
  * operations in the canvas window. A single given operation is active at any

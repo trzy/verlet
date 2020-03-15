@@ -1,5 +1,6 @@
 /*
  * demo.js
+ * Bart Trzynadlowski, 2020
  *
  * Main program.
  */

@@ -1,5 +1,6 @@
 /*
  * pbd.js
+ * Bart Trzynadlowski, 2020
  *
  * Position-based dynamics system as described in:
  *

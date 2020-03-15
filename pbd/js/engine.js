@@ -1,5 +1,6 @@
 /*
  * engine.js
+ * Bart Trzynadlowski, 2020
  *
  * Manages canvas rendering at a variable frame rate and physics simulation at
  * a fixed time step.

@@ -1,7 +1,8 @@
 /*
  * math.js
+ * Bart Trzynadlowski, 2020
  *
- * Math routines and data structure.
+ * Math routines and data structures.
  */
 
 

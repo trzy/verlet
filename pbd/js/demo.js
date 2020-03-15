@@ -124,6 +124,10 @@ function CreateNewBody()
   // Create a new body
   g_currentEditedBody = new Body();
   g_physics.AddBody(g_currentEditedBody);
+
+  // New body was created. Need to create new edit operation in case old one
+  // was using this body.
+  OnCreationOperationListChanged();
 }
 
 function OnMouseMove(event)

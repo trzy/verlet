@@ -1,7 +1,20 @@
-function Length(dx, dy)
-{
-  return Math.sqrt(dx * dx + dy * dy);
-}
+/*
+ * pbd.js
+ *
+ * Position-based dynamics system as described in:
+ *
+ *  Position Based Dynamics
+ *  Matthias Muller, Bruno Heidelberger, Marcus Hennis, John Ratcliff
+ *  3rd Workshop in Virtual Reality Interactions and Physical Simulation
+ *  2006
+ */
+
+
+/*
+ * Vertex:
+ *
+ * Represents a point mass and is the fundamental unit of simulation.
+ */
 
 function Vertex(x, y, mass)
 {
@@ -70,6 +83,8 @@ Vertex.prototype.FinalizeState = function(timeStep)
 {
   this.v = Mult(Sub(this.p, this.x), 1.0 / timeStep); // v = (p - x) / timeStep
   this.x = this.p.Copy();
+  //if (!isFinite(this.x.x))
+  //  console.log("ERROR: frame=", frameNum);
 }
 
 Vertex.prototype.Draw = function(ctx)
@@ -100,6 +115,15 @@ function AnchorVertex(x, y)
   this.w = 0;
 }
 
+
+/*
+ * AnchorVertex:
+ *
+ * A special vertex with infinite mass that does not move, as described in the
+ * paper. Unfortunately, these cannot be linked with distance constraints,
+ * therefore, using AnchorConstraint is the preferred way to pin vertics.
+ */
+
 AnchorVertex.prototype = new Vertex();
 
 AnchorVertex.prototype.AddForce = function(fx, fy)
@@ -114,8 +138,21 @@ AnchorVertex.prototype.UpdateVelocity = function(timeStep)
 {
 }
 
+
+/*
+ * Constraint:
+ *
+ * Constraint interface. The solver iterates over all constraints and projects
+ * them in order to resolve vertex positions.
+ *
+ * Constraints are sorted in descending order of priority value. Lower values
+ * are considered to be higher priority because they run last and can therefore
+ * override constraints computed earlier.
+ */
+
 function Constraint()
 {
+  this.priority = 1;
 }
 
 Constraint.prototype.Project = function(numSolverIterations)
@@ -125,6 +162,14 @@ Constraint.prototype.Project = function(numSolverIterations)
 Constraint.prototype.Draw = function(ctx)
 {
 }
+
+
+/*
+ * DistanceConstraint:
+ *
+ * Enforces a distance between two vertices. k is the stiffness parameter and
+ * ranges from 0 to 1 (rigid).
+ */
 
 function DistanceConstraint(k, vertex1, vertex2, distance)
 {
@@ -176,6 +221,13 @@ DistanceConstraint.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
+
+/*
+ * AnchorConstraint:
+ *
+ * Anchors (pins) a vertex at a given position.
+ */
+
 function AnchorConstraint(vertex, x, y)
 {
   this.priority = 0;  // highest priority (applied last)
@@ -202,6 +254,14 @@ AnchorConstraint.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
+
+/*
+ * Body:
+ *
+ * A collection of vertices representing a single body. Velocity damping occurs
+ * over each body.
+ */
+
 function Body()
 {
   var m_vertices = [];
@@ -226,6 +286,13 @@ function Body()
     return null;
   }
 }
+
+
+/*
+ * PBDSystem:
+ *
+ * PBD physics system. Updates all bodies and constraints.
+ */
 
 function PBDSystem()
 {
@@ -259,7 +326,7 @@ function PBDSystem()
     var L = Vector3.Zero();
     for (var i = 0; i < r.length; i++)
     {
-      var Li = Cross(r[i], Mult(vertices[i].mass, vertices[i].Velocity()));
+      var Li = Vector3.Cross(r[i], Mult(vertices[i].mass, vertices[i].Velocity()));
       L = Add(L, Li);
     }
 
@@ -275,11 +342,20 @@ function PBDSystem()
     var Iinv = I.Inverse();
     var omega = Mult(Iinv, L);
 
+    // When omega is non-finite (caused by I^-1 being non-existent), the angular
+    // component simply does not exist, so we should zero out omega. This occurs
+    // when all the r vectors have the same two components zeroed out. For example,
+    // in our 2D simulation, r_z == 0 always, and if r_x becomes 0 for all vertices
+    // (e.g., a vertical un-moving chain), then I^-1 cannot be computed.
+    if (!omega.IsFinite())
+    {
+      omega = Vector3.Zero();
+    }
+
     for (var i = 0; i < r.length; i++)
     {
-      // TODO: when deltaVcm == 0, Iinv matrix does not exist and we should have vi unaffected
       var deltaVcm = Sub(vcm, vertices[i].Velocity());
-      var deltaVangular = Cross(omega, r[i]);
+      var deltaVangular = Vector3.Cross(omega, r[i]);
       var deltaV = Add(deltaVcm, deltaVangular);
       var newVelocity = Add(vertices[i].Velocity(), Mult(kDamping, deltaV));
       vertices[i].SetVelocity(newVelocity);

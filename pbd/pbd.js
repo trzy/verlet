@@ -116,6 +116,7 @@ Constraint.prototype.Draw = function(ctx)
 
 function DistanceConstraint(k, vertex1, vertex2, distance)
 {
+  this.priority = 1;
   this.vertex1 = vertex1;
   this.vertex2 = vertex2;
   this.k = k;
@@ -163,10 +164,37 @@ DistanceConstraint.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
+function AnchorConstraint(vertex, x, y)
+{
+  this.priority = 0;  // highest priority (applied last)
+  this.vertex = vertex;
+  this.position = new Vector3(x, y, 0);
+  console.log(this.position);
+}
+
+AnchorConstraint.prototype = new Constraint();
+
+AnchorConstraint.prototype.Project = function(numSolverIterations)
+{
+  this.vertex.x = this.position.Copy();
+  this.vertex.p = this.position.Copy();
+}
+
+AnchorConstraint.prototype.Draw = function(ctx)
+{
+  ctx.beginPath();
+  ctx.arc(this.x, ctx.canvas.height - this.y, 4, 0, 360);
+  ctx.fillStyle = "#f00";
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#000";
+  ctx.stroke();
+}
+
 function Body()
 {
   var m_vertices = [];
-  
+
   this.Vertices = function()
   {
     return m_vertices.slice();
@@ -182,13 +210,13 @@ function PBDSystem()
 {
   this.physicsSolverIterations = 3;
   this.kDamping = 0.1;
-  
+
   var m_bodies = [];
   var m_constraints = [];
   var m_physicsTimeElapsed = 0;
-  
+
   var self = this;
-  
+
   function DampVelocities(body, kDamping)
   {
     // Exclude vertices with non-finite mass (e.g., anchor vertices) or w == 0, which are not
@@ -236,7 +264,7 @@ function PBDSystem()
       vertices[i].SetVelocity(newVelocity);
     }
   }
-  
+
   this.Update = function(timeStep)
   {
     for (let body of m_bodies)
@@ -251,7 +279,7 @@ function PBDSystem()
     {
       DampVelocities(body, self.kDamping);
     }
-    
+
     for (let body of m_bodies)
     {
       for (let vertex of body.Vertices())
@@ -259,6 +287,12 @@ function PBDSystem()
         vertex.IntegrateVelocity(timeStep);
       }
     }
+
+    m_constraints.sort((a, b) =>
+    {
+      // Higher priority (lower number) pushed to end of array
+      return b.priority - a.priority;
+    });
 
     for (var i = 0; i < self.physicsSolverIterations; i++)
     {
@@ -275,10 +309,10 @@ function PBDSystem()
         vertex.FinalizeState(timeStep);
       }
     }
-    
+
     m_physicsTimeElapsed += timeStep;
   }
-  
+
   this.FindObject = function(x, y)
   {
     for (var i = 0; i < m_vertices.length; i++)
@@ -298,7 +332,7 @@ function PBDSystem()
   {
     m_constraints.push(constraint);
   }
-  
+
   this.Drawables = function()
   {
     var drawables = []

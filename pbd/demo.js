@@ -8,7 +8,7 @@ function CreateRope(x, y, length, numSegments)
 {
   var rope = new Body();
   g_physics.AddBody(rope);
-  
+
   var anchor = new AnchorVertex(x, y, 1);
   rope.AddVertex(anchor);
 
@@ -38,9 +38,11 @@ function CreateRope(x, y, length, numSegments)
   }
 }
 
-/*
 function CreateFabric(x, y, width, height, numSegmentsX, numSegmentsY)
 {
+  var fabric = new Body();
+  g_physics.AddBody(fabric);
+
   var stiffness = 1;
   var segmentWidth = width / numSegmentsX;
   var segmentHeight = height / numSegmentsY;
@@ -50,26 +52,33 @@ function CreateFabric(x, y, width, height, numSegmentsX, numSegmentsY)
     points[i] = [];
     for (var j = 0; j < numSegmentsX; j++)
     {
-      var pt = new Vertex(x + j * segmentWidth, y - i * segmentHeight, 1);
+      var xPos = x + j * segmentWidth;
+      var yPos = y - i * segmentHeight;
+
+      // Top row are anchor points
+      //var pt = i == 0 ? new AnchorVertex(xPos, yPos, 1) : new Vertex(xPos, yPos, 1);
+      var pt = new Vertex(xPos, yPos, 1);
+
       if (j > 0)
       {
         var leftPt = points[i][points[i].length - 1];
-        var link = new LinkConstraint(leftPt, pt, segmentWidth, stiffness);
-        pt.AddConstraint(link);
+        var link = new DistanceConstraint(stiffness, leftPt, pt, segmentWidth);
+        g_physics.AddConstraint(link);
       }
+
       if (i == 0)
       {
-        // Top row is pinned
-        pt.AddConstraint(new PinConstraint(pt, pt.x, pt.y));
+        // Top row is pinned (we use pin constraints because two AnchorVertexes cannot be constrainted together due to weight NaN)
+        g_physics.AddConstraint(new AnchorConstraint(pt, pt.Position().x, pt.Position().y));
       }
       else
       {
         var topPt = points[i - 1][j];
-        var link = new LinkConstraint(topPt, pt, segmentHeight, stiffness);
-        pt.AddConstraint(link);
+        var link = new DistanceConstraint(stiffness, topPt, pt, segmentHeight);
+        g_physics.AddConstraint(link);
       }
       points[i].push(pt);
-      VerletAddObject(pt);
+      fabric.AddVertex(pt);
     }
   }
 
@@ -82,7 +91,6 @@ function CreateFabric(x, y, width, height, numSegmentsX, numSegmentsY)
     }
   }
 }
-*/
 
 var g_highlightedObject;
 var g_selectedObject;
@@ -181,7 +189,7 @@ function Demo()
   $("#StepButton").click(OnStepButtonPressed);
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
-  //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
+  CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
   g_engine.Start(OnUpdateComplete);
   g_engine.physicsEnabled = true;
 }

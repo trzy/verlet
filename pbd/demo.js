@@ -96,19 +96,22 @@ var g_highlightedObject;
 var g_selectedObject;
 var g_selectedPinConstraint;
 
+var g_newBody;
+var g_newConstraints = [];
+
 function OnMouseMove(event)
 {
-  /*
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
   var y = canvas.height - event.offsetY;
-  g_highlightedObject = FindObjectAt(x, y);
+  g_highlightedObject = g_physics.FindObjectAt(x, y);
+/*
   if (g_selectedObject)
   {
     g_selectedPinConstraint.x = x;
     g_selectedPinConstraint.y = y;
   }
-  */
+*/
 }
 
 function OnMouseDown(event)
@@ -116,21 +119,42 @@ function OnMouseDown(event)
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
   var y = canvas.height - event.offsetY;
+  
+  // If editing a body...
+  if (g_newBody)
+  {
+    var createWhat = $("#ObjectList").val();
+    if (createWhat == "Vertex")
+    {
+      var vertex = new Vertex(x, y, 1);
+      vertex.AddForce(0, -g_gravity * vertex.mass);
+      g_newBody.AddVertex(vertex);
+    }
+    else if (createWhat == "Constraint")
+    {
+      //var constraint = DistanceConstraint()
+    }
+  }
+  
+  /*
   g_selectedObject = g_engine.FindObjectAt(x, y);
   if (g_selectedObject)
   {
     g_selectedPinConstraint = new PinConstraint(g_selectedObject, x, y);
     g_selectedObject.AddConstraint(g_selectedPinConstraint);
   }
+  */
 }
 
 function OnMouseUp(event)
 {
+  /*
   if (g_selectedObject)
   {
     g_selectedObject.RemoveConstraint(g_selectedPinConstraint);
     delete g_selectedPinConstraint;
   }
+  */
 }
 
 function OnUpdateComplete(ctx)
@@ -138,12 +162,21 @@ function OnUpdateComplete(ctx)
   if (g_highlightedObject)
   {
     ctx.beginPath();
-    ctx.arc(g_highlightedObject.x, ctx.canvas.height - g_highlightedObject.y, 4, 0, 360);
+    ctx.arc(g_highlightedObject.Position().x, ctx.canvas.height - g_highlightedObject.Position().y, 4, 0, 360);
     ctx.fillStyle = "#88f";
     ctx.fill();
     ctx.lineWidth = 1;
     ctx.strokeStyle = "#000";
     ctx.stroke();
+  }
+  
+  // Draw new body
+  if (g_newBody)
+  {
+    for (let drawable of g_newBody.Vertices())
+    {
+      drawable.Draw(ctx);
+    }
   }
 }
 
@@ -153,19 +186,33 @@ function OnPauseButtonPressed()
   {
     $("#StepButton").prop("disabled", false);
     $("#PauseButton").html("Resume");
+    $("#CreateButton").prop("disabled", false);
     g_engine.physicsEnabled = false;
   }
   else
   {
     $("#StepButton").prop("disabled", true);
     $("#PauseButton").html("Pause");
+    $("#CreateButton").prop("disabled", true);
     g_engine.physicsEnabled = true;
+    
+    // Commit body if one was being created
+    if (g_newBody && g_newBody.Vertices().length > 0)
+    {
+      g_physics.AddBody(g_newBody);
+    }
+    g_newBody = undefined;
   }
 }
 
 function OnStepButtonPressed()
 {
   g_engine.runPhysicsSteps = 1;
+}
+
+function OnCreateButtonPressed()
+{
+  g_newBody = new Body();
 }
 
 function Demo()
@@ -187,6 +234,7 @@ function Demo()
   $("#Viewport").mouseup(OnMouseUp);
   $("#PauseButton").click(OnPauseButtonPressed);
   $("#StepButton").click(OnStepButtonPressed);
+  $("#CreateButton").click(OnCreateButtonPressed);
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
   CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);

@@ -78,6 +78,12 @@ Vertex.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
+Vertex.prototype.HitTest = function(x, y)
+{
+  var radius = Sub(this.Position(), new Vector3(x, y, 0)).Magnitude();
+  return radius <= 10;
+}
+
 function AnchorVertex(x, y)
 {
   this.x = new Vector3(x, y, 0);
@@ -169,7 +175,6 @@ function AnchorConstraint(vertex, x, y)
   this.priority = 0;  // highest priority (applied last)
   this.vertex = vertex;
   this.position = new Vector3(x, y, 0);
-  console.log(this.position);
 }
 
 AnchorConstraint.prototype = new Constraint();
@@ -313,12 +318,15 @@ function PBDSystem()
     m_physicsTimeElapsed += timeStep;
   }
 
-  this.FindObject = function(x, y)
+  this.FindObjectAt = function(x, y)
   {
-    for (var i = 0; i < m_vertices.length; i++)
+    for (let body of m_bodies)
     {
-      if (m_vertices[i].Selected(x, y))
-        return m_vertices[i];
+      for (let vertex of body.Vertices())
+      {
+        if (vertex.HitTest(x, y))
+          return vertex;
+      }
     }
     return null;
   }

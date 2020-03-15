@@ -16,8 +16,6 @@ function Engine(physicsSystem)
   
   var self = this;
   
-  
-  
   function UpdateFPS()
   {
     var now = Date.now();

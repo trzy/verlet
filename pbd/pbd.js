@@ -163,21 +163,37 @@ DistanceConstraint.prototype.Draw = function(ctx)
   ctx.stroke();
 }
 
+function Body()
+{
+  var m_vertices = [];
+  
+  this.Vertices = function()
+  {
+    return m_vertices.slice();
+  }
+
+  this.AddVertex = function(vertex)
+  {
+    m_vertices.push(vertex);
+  }
+}
+
 function PBDSystem()
 {
   this.physicsSolverIterations = 3;
+  this.kDamping = 0.1;
   
-  var m_vertices = [];
+  var m_bodies = [];
   var m_constraints = [];
   var m_physicsTimeElapsed = 0;
   
   var self = this;
   
-  function DampVelocities(kDamping)
+  function DampVelocities(body, kDamping)
   {
     // Exclude vertices with non-finite mass (e.g., anchor vertices) or w == 0, which are not
     // part of the dynamic body
-    var vertices = m_vertices.filter(vertex => vertex.w != 0 && isFinite(vertex.mass));
+    var vertices = body.Vertices().filter(vertex => vertex.w != 0 && isFinite(vertex.mass));
 
     var mass = vertices.reduce((sum, vertex) => sum + vertex.mass, 0);
     var w = 1.0 / mass;
@@ -222,17 +238,26 @@ function PBDSystem()
   }
   
   this.Update = function(timeStep)
-  {   
-    for (let vertex of m_vertices)
+  {
+    for (let body of m_bodies)
     {
-      vertex.UpdateVelocity(timeStep);
+      for (let vertex of body.Vertices())
+      {
+        vertex.UpdateVelocity(timeStep);
+      }
     }
 
-    DampVelocities(0.1);
-
-    for (let vertex of m_vertices)
+    for (let body of m_bodies)
     {
-      vertex.IntegrateVelocity(timeStep);
+      DampVelocities(body, self.kDamping);
+    }
+    
+    for (let body of m_bodies)
+    {
+      for (let vertex of body.Vertices())
+      {
+        vertex.IntegrateVelocity(timeStep);
+      }
     }
 
     for (var i = 0; i < self.physicsSolverIterations; i++)
@@ -243,9 +268,12 @@ function PBDSystem()
       }
     }
 
-    for (let vertex of m_vertices)
+    for (let body of m_bodies)
     {
-      vertex.FinalizeState(timeStep);
+      for (let vertex of body.Vertices())
+      {
+        vertex.FinalizeState(timeStep);
+      }
     }
     
     m_physicsTimeElapsed += timeStep;
@@ -261,9 +289,9 @@ function PBDSystem()
     return null;
   }
 
-  this.AddVertex = function(vertex)
+  this.AddBody = function(body)
   {
-    m_vertices.push(vertex);
+    m_bodies.push(body);
   }
 
   this.AddConstraint = function(constraint)
@@ -273,6 +301,11 @@ function PBDSystem()
   
   this.Drawables = function()
   {
-    return m_vertices.slice().concat(m_constraints.slice());
+    var drawables = []
+    for (let body of m_bodies)
+    {
+      drawables = drawables.concat(body.Vertices());
+    }
+    return drawables.concat(m_constraints.slice());
   }
 }

@@ -6,8 +6,11 @@ var g_engine = new Engine(g_physics);
 
 function CreateRope(x, y, length, numSegments)
 {
+  var rope = new Body();
+  g_physics.AddBody(rope);
+  
   var anchor = new AnchorVertex(x, y, 1);
-  g_physics.AddVertex(anchor);
+  rope.AddVertex(anchor);
 
   // Create N bodies
   var segments = [ anchor ];
@@ -16,7 +19,7 @@ function CreateRope(x, y, length, numSegments)
   {
     var vertex = new Vertex(x + (i + 1) * segmentLength, y, 1);
     vertex.AddForce(0, -g_gravity * vertex.mass);
-    g_physics.AddVertex(vertex);
+    rope.AddVertex(vertex);
     segments.push(vertex);
   }
 

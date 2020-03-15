@@ -162,3 +162,117 @@ DistanceConstraint.prototype.Draw = function(ctx)
   ctx.strokeStyle = "#000";
   ctx.stroke();
 }
+
+function PBDSystem()
+{
+  this.physicsSolverIterations = 3;
+  
+  var m_vertices = [];
+  var m_constraints = [];
+  var m_physicsTimeElapsed = 0;
+  
+  var self = this;
+  
+  function DampVelocities(kDamping)
+  {
+    // Exclude vertices with non-finite mass (e.g., anchor vertices) or w == 0, which are not
+    // part of the dynamic body
+    var vertices = m_vertices.filter(vertex => vertex.w != 0 && isFinite(vertex.mass));
+
+    var mass = vertices.reduce((sum, vertex) => sum + vertex.mass, 0);
+    var w = 1.0 / mass;
+
+    var xcm = Mult(w, vertices.reduce((sum, vertex) => Add(sum, Mult(vertex.mass, vertex.Position())), Vector3.Zero()));  // xcm = Sum(x_i * m_i) / Sum(m_i)
+    var vcm = Mult(w, vertices.reduce((sum, vertex) => Add(sum, Mult(vertex.mass, vertex.Velocity())), Vector3.Zero()));  // vcm = Sum(v_i * m_i) / Sum(m_i)
+
+    var r = [];
+    for (let vertex of vertices)
+    {
+      r.push(Sub(vertex.Position(), xcm));
+    }
+
+    var L = Vector3.Zero();
+    for (var i = 0; i < r.length; i++)
+    {
+      var Li = Cross(r[i], Mult(vertices[i].mass, vertices[i].Velocity()));
+      L = Add(L, Li);
+    }
+
+    var I = Matrix3.Zero();
+    for (var i = 0; i < r.length; i++)
+    {
+      var r$ = r[i].CrossMatrix();
+      var rrt = Mult(r$, r$.Transpose());
+      var Ii = Mult(vertices[i].mass, rrt);
+      I = Add(I, Ii);
+    }
+
+    var Iinv = I.Inverse();
+    var omega = Mult(Iinv, L);
+
+    for (var i = 0; i < r.length; i++)
+    {
+      // TODO: when deltaVcm == 0, Iinv matrix does not exist and we should have vi unaffected
+      var deltaVcm = Sub(vcm, vertices[i].Velocity());
+      var deltaVangular = Cross(omega, r[i]);
+      var deltaV = Add(deltaVcm, deltaVangular);
+      var newVelocity = Add(vertices[i].Velocity(), Mult(kDamping, deltaV));
+      vertices[i].SetVelocity(newVelocity);
+    }
+  }
+  
+  this.Update = function(timeStep)
+  {   
+    for (let vertex of m_vertices)
+    {
+      vertex.UpdateVelocity(timeStep);
+    }
+
+    DampVelocities(0.1);
+
+    for (let vertex of m_vertices)
+    {
+      vertex.IntegrateVelocity(timeStep);
+    }
+
+    for (var i = 0; i < self.physicsSolverIterations; i++)
+    {
+      for (let constraint of m_constraints)
+      {
+        constraint.Project(self.physicsSolverIterations);
+      }
+    }
+
+    for (let vertex of m_vertices)
+    {
+      vertex.FinalizeState(timeStep);
+    }
+    
+    m_physicsTimeElapsed += timeStep;
+  }
+  
+  this.FindObject = function(x, y)
+  {
+    for (var i = 0; i < m_vertices.length; i++)
+    {
+      if (m_vertices[i].Selected(x, y))
+        return m_vertices[i];
+    }
+    return null;
+  }
+
+  this.AddVertex = function(vertex)
+  {
+    m_vertices.push(vertex);
+  }
+
+  this.AddConstraint = function(constraint)
+  {
+    m_constraints.push(constraint);
+  }
+  
+  this.Drawables = function()
+  {
+    return m_vertices.slice().concat(m_constraints.slice());
+  }
+}

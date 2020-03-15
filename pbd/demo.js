@@ -1,12 +1,13 @@
 //TODO: rigid box and colliders?
 
 var g_gravity = 1200;
-var g_engine = new Engine();
+var g_physics = new PBDSystem();
+var g_engine = new Engine(g_physics);
 
 function CreateRope(x, y, length, numSegments)
 {
   var anchor = new AnchorVertex(x, y, 1);
-  g_engine.AddVertex(anchor);
+  g_physics.AddVertex(anchor);
 
   // Create N bodies
   var segments = [ anchor ];
@@ -15,7 +16,7 @@ function CreateRope(x, y, length, numSegments)
   {
     var vertex = new Vertex(x + (i + 1) * segmentLength, y, 1);
     vertex.AddForce(0, -g_gravity * vertex.mass);
-    g_engine.AddVertex(vertex);
+    g_physics.AddVertex(vertex);
     segments.push(vertex);
   }
 
@@ -30,7 +31,7 @@ function CreateRope(x, y, length, numSegments)
     var vertex2 = segments[i + 1];
     var distance = Math.abs(vertex1.Position().x - vertex2.Position().x);
     var constraint = new DistanceConstraint(kStiffness, vertex1, vertex2, distance);
-    g_engine.AddConstraint(constraint);
+    g_physics.AddConstraint(constraint);
   }
 }
 
@@ -135,6 +136,27 @@ function OnUpdateComplete(ctx)
   }
 }
 
+function OnPauseButtonPressed()
+{
+  if (g_engine.physicsEnabled)
+  {
+    $("#StepButton").prop("disabled", false);
+    $("#PauseButton").html("Resume");
+    g_engine.physicsEnabled = false;
+  }
+  else
+  {
+    $("#StepButton").prop("disabled", true);
+    $("#PauseButton").html("Pause");
+    g_engine.physicsEnabled = true;
+  }
+}
+
+function OnStepButtonPressed()
+{
+  g_engine.runPhysicsSteps = 1;
+}
+
 function Demo()
 {
   var i = Mult(Matrix3.Identity(), new Vector3(1, 2, 3));
@@ -152,6 +174,8 @@ function Demo()
   $("#Viewport").mousemove(OnMouseMove);
   $("#Viewport").mousedown(OnMouseDown);
   $("#Viewport").mouseup(OnMouseUp);
+  $("#PauseButton").click(OnPauseButtonPressed);
+  $("#StepButton").click(OnStepButtonPressed);
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);

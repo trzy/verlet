@@ -24,7 +24,12 @@ function Vertex(x, y, mass)
   this.v = Vector3.Zero();
   this.mass = mass;
   this.w = 1.0 / mass;
+  this.fillColor = Vertex.defaultFillColor;
+  this.strokeColor = Vertex.defaultStrokeColor;
 }
+
+Vertex.defaultFillColor = "#fff";
+Vertex.defaultStrokeColor = "000";
 
 Vertex.prototype.Position = function()
 {
@@ -56,6 +61,12 @@ Vertex.prototype.SetPosition = function(position)
 Vertex.prototype.SetVelocity = function(velocity)
 {
   this.v = velocity.Copy();
+}
+
+Vertex.prototype.SetStyle = function(fillColor, strokeColor)
+{
+  this.fillColor = fillColor;
+  this.strokeColor = strokeColor;
 }
 
 Vertex.prototype.AddForce = function(fx, fy)
@@ -92,10 +103,10 @@ Vertex.prototype.Draw = function(ctx)
   var position = this.x;
   ctx.beginPath();
   ctx.arc(position.x, ctx.canvas.height - position.y, 4, 0, 360);
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = this.fillColor;
   ctx.fill();
   ctx.lineWidth = 1;
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = this.strokeColor;
   ctx.stroke();
 }
 
@@ -456,7 +467,7 @@ function PBDSystem()
   {
     m_bodies.push(body);
   }
-  
+
   this.RemoveBody = function(body)
   {
     // Remove any constraints containing body

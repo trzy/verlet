@@ -29,10 +29,11 @@ EditOperation.prototype.Cancel = function() {}
  * Places vertices into a physics body.
  */
 
-function CreateVertexOperation(body)
+function CreateVertexOperation(body, fillColor)
 {
   this.body = body;
   this.vertexMass = 1;
+  this.fillColor = fillColor;
 }
 
 CreateVertexOperation.prototype = new EditOperation();
@@ -46,6 +47,7 @@ CreateVertexOperation.prototype.OnMouseDown = function(x, y)
 
   var vertex = new Vertex(x, y, this.vertexMass);
   vertex.AddForce(0, -g_gravity * vertex.mass);
+  vertex.fillColor = this.fillColor;
   this.body.AddVertex(vertex);
 }
 

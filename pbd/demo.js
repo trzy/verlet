@@ -108,8 +108,16 @@ function CreateNewBody()
     if (g_currentEditedBody.Vertices().length <= 0)
     {
       g_physics.RemoveBody(g_currentEditedBody);
-      g_currentEditedBody = null;
     }
+
+    // Set its color back to default
+    for (let vertex of g_currentEditedBody.Vertices())
+    {
+      vertex.fillColor = Vertex.defaultFillColor;
+      vertex.strokeColor = Vertex.defaultStrokeColor;
+    }
+
+    g_currentEditedBody = null;
   }
 
   // Create a new body
@@ -181,7 +189,7 @@ function OnCreationOperationListChanged()
       // If no body being edited, create one
       CreateNewBody();
     }
-    g_currentOperation = new CreateVertexOperation(g_currentEditedBody);
+    g_currentOperation = new CreateVertexOperation(g_currentEditedBody, "#0ff");
   }
   else if (operation == "Constraint")
   {

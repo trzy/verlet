@@ -134,7 +134,7 @@ function OnMouseMove(event)
 {
   var canvas = document.getElementById("Viewport");
   var x = event.offsetX;
-  var y = canvas.height - event.offsetY;
+  var y = canvas.height - event.offsetY;  // convert to simulation coordinates where +y is up
   g_currentOperation.OnMouseMove(x, y);
 }
 
@@ -186,6 +186,8 @@ function OnNewBodyButtonPressed()
 
 function OnCreationOperationListChanged()
 {
+  g_currentOperation.Cancel();
+
   var operation = $("#CreationOperation").val();
   if (operation == "Vertex")
   {
@@ -199,6 +201,14 @@ function OnCreationOperationListChanged()
   else if (operation == "Constraint")
   {
     g_currentOperation = new CreateConstraintOperation(g_physics);
+  }
+  else if (operation == "AARectangleCollider")
+  {
+    g_currentOperation = new CreateAARectangleColliderOperation(g_physics);
+  }
+  else if (operation == "CollisionProbe")
+  {
+    g_currentOperation = new CreateCollisionProbeOperation(g_physics);
   }
 }
 

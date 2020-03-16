@@ -163,3 +163,161 @@ CreateConstraintOperation.prototype.Cancel = function()
   this.vertex1 = null;
   this.vertex2 = null;
 }
+
+
+/*
+ * CreateAARectangleColliderOperation:
+ *
+ * Adds an AARectangleCollider to the physics system.
+ */
+
+function CreateAARectangleColliderOperation(physics)
+{
+  this.physics = physics;
+  this.cursor = Vector3.Zero();
+  this.corner1 = null;
+  this.corner2 = null;
+
+  this.FinalizeCollider = function()
+  {
+    if (this.corner1 == null || this.corner2 == null)
+    {
+      return;
+    }
+
+    var center = new Vector3(0.5 * (this.corner1.x + this.corner2.x), 0.5 * (this.corner1.y + this.corner2.y), 0);
+    var width = Math.abs(this.corner1.x - this.corner2.x);
+    var height = Math.abs(this.corner1.y - this.corner2.y);
+    var collider = new AARectangleCollider(center, width, height);
+    this.physics.AddCollider(collider);
+    this.corner1 = null;
+    this.corner2 = null;
+  }
+}
+
+CreateAARectangleColliderOperation.prototype = new EditOperation();
+
+CreateAARectangleColliderOperation.prototype.Draw = function(ctx)
+{
+  if (this.corner1)
+  {
+    // Note: rect() does not care about signs; no need to order corners
+    var corner1 = this.corner1.Copy();
+    var corner2 = !this.corner2 ? this.cursor.Copy() : this.corner2.Copy();
+    ctx.beginPath();
+    ctx.rect(corner1.x, ctx.canvas.height - corner1.y, corner2.x - corner1.x, corner1.y - corner2.y);
+    ctx.fillStyle = "#e50";
+    ctx.fill();
+  }
+}
+
+CreateAARectangleColliderOperation.prototype.OnMouseMove = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+}
+
+CreateAARectangleColliderOperation.prototype.OnMouseDown = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+
+  if (!this.corner1)
+  {
+    // First click
+    this.corner1 = this.cursor.Copy();
+    this.corner2 = null;
+  }
+  else
+  {
+    // Second click
+    this.corner2 = this.cursor.Copy();
+    this.FinalizeCollider();
+  }
+}
+
+CreateAARectangleColliderOperation.prototype.Cancel = function()
+{
+  this.corner1 = null;
+  this.corner2 = null;
+}
+
+
+
+/*
+ * CreateCollisionProbeOperation:
+ *
+ * Creates a line segment that visualizes collider intersections.
+ */
+
+function CreateCollisionProbeOperation(physics)
+{
+  this.physics = physics;
+  this.cursor = Vector3.Zero();
+  this.from = null;
+}
+
+CreateCollisionProbeOperation.prototype = new EditOperation();
+
+CreateCollisionProbeOperation.prototype.Draw = function(ctx)
+{
+  if (this.from)
+  {
+    var from = this.from.Copy();
+    var to = this.cursor.Copy();
+    from.y = ctx.canvas.height - from.y;
+    to.y = ctx.canvas.height - to.y;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#f00";
+    ctx.stroke();
+
+    // Perform collision tests
+    for (let collider of this.physics.Colliders())
+    {
+      var result = collider.RayCast(this.from, this.cursor);
+      if (result.intersected)
+      {
+        // Draw a blue normal from the intersection point
+        ctx.beginPath();
+        ctx.moveTo(result.point.x, ctx.canvas.height - result.point.y);
+        ctx.lineTo(result.point.x + result.normal.x, ctx.canvas.height - (result.point.y + result.normal.y));
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#00f";
+        ctx.fill();
+
+        // Draw a green dot at intersection point
+        ctx.beginPath();
+        ctx.arc(result.point.x, ctx.canvas.height - result.point.y, 4, 0, 360);
+        ctx.fillStyle = "#0f0";
+        ctx.fill();
+      }
+    }
+  }
+}
+
+CreateCollisionProbeOperation.prototype.OnMouseMove = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+}
+
+CreateCollisionProbeOperation.prototype.OnMouseDown = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+
+  if (!this.from)
+  {
+    // First click
+    this.from = this.cursor.Copy();
+  }
+  else
+  {
+    // Second click
+    this.from = null;
+  }
+}
+
+CreateCollisionProbeOperation.prototype.Cancel = function()
+{
+  this.from = null;
+}

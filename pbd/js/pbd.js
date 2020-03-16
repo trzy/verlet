@@ -297,6 +297,52 @@ AnchorConstraint.prototype.Draw = function(ctx)
 
 
 /*
+ * CollisionConstraint:
+ *
+ * Resolves a collision with a static collider by moving the vertex.
+ */
+
+function CollisionConstraint(vertex, intersectionPoint, surfaceNormal)
+{
+  this.priority = 0;
+  this.vertex = vertex;
+  this.intersectionPoint = intersectionPoint;
+  this.surfaceNormal = surfaceNormal;
+}
+
+CollisionConstraint.prototype = new Constraint();
+
+CollisionConstraint.prototype.IsAttachedToBody = function(body)
+{
+  for (let vertex of body.Vertices())
+  {
+    if (vertex == this.vertex)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+CollisionConstraint.prototype.Project = function(numSolverIterations)
+{
+  // This is an inequality constraint. If C(p) >= 0, projection is not
+  // performed. Note: this tests directionality of the intersection and is
+  // redundant if our collision raycasts already check this.
+  var c = Vector3.Dot(Sub(this.vertex.p, this.intersectionPoint), this.surfaceNormal);
+  if (c >= 0)
+  {
+    return;
+  }
+
+  var deltaP = Mult(-c, this.surfaceNormal);
+
+  // Apply with stiffness k=1
+  this.vertex.p = Add(this.vertex.p, deltaP);
+}
+
+
+/*
  * Body:
  *
  * A collection of vertices representing a single body. Velocity damping occurs
@@ -342,6 +388,8 @@ function PBDSystem()
 
   var m_bodies = [];
   var m_constraints = [];
+  var m_collisionConstraints = [];
+  var m_colliders = [];
   var m_physicsTimeElapsed = 0;
 
   var self = this;
@@ -403,6 +451,41 @@ function PBDSystem()
     }
   }
 
+  function GenerateCollisionConstraints()
+  {
+    // Clear out collision constraints generated last frame
+    //TODO: we need to handle case where collision is not resolved. This requires static
+    // collision detection. Or, maybe perform a follow-up test to determine whether constraint
+    // can be removed?
+    m_collisionConstraints = [];
+
+    for (let body of m_bodies)
+    {
+      for (let vertex of body.Vertices())
+      {
+        var from = vertex.x;
+        var to = vertex.p;
+
+        // Get possible collision points in descending order of distance from
+        // vertex position before velocity update
+        var collisions = m_colliders.map(collider => collider.RayCast(from, to)).filter(collision => collision.intersected);
+        collisions.sort((a, b) =>
+        {
+          // Sort descending order of distance
+          return a.distance - b.distance;
+        });
+
+        // If there is a collision, generate the collider constraint
+        if (collisions.length > 0)
+        {
+          var collision = collisions[0];
+          var constraint = new CollisionConstraint(vertex, collision.point, collision.normal);
+          m_collisionConstraints.push(constraint);
+        }
+      }
+    }
+  }
+
   this.Update = function(timeStep)
   {
     for (let body of m_bodies)
@@ -426,7 +509,10 @@ function PBDSystem()
       }
     }
 
-    m_constraints.sort((a, b) =>
+    GenerateCollisionConstraints();
+
+    var constraints = m_constraints.slice().concat(m_collisionConstraints);
+    constraints.sort((a, b) =>
     {
       // Higher priority (lower number) pushed to end of array
       return b.priority - a.priority;
@@ -434,7 +520,7 @@ function PBDSystem()
 
     for (var i = 0; i < self.physicsSolverIterations; i++)
     {
-      for (let constraint of m_constraints)
+      for (let constraint of constraints)
       {
         constraint.Project(self.physicsSolverIterations);
       }
@@ -481,6 +567,16 @@ function PBDSystem()
     m_constraints.push(constraint);
   }
 
+  this.AddCollider = function(collider)
+  {
+    m_colliders.push(collider);
+  }
+
+  this.Colliders = function()
+  {
+    return m_colliders.slice();
+  }
+
   this.Drawables = function()
   {
     var drawables = []
@@ -488,6 +584,6 @@ function PBDSystem()
     {
       drawables = drawables.concat(body.Vertices());
     }
-    return drawables.concat(m_constraints.slice());
+    return drawables.concat(m_constraints.slice()).concat(m_colliders.slice());
   }
 }

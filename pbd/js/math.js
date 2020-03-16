@@ -37,9 +37,20 @@ function Vector3(x, y, z)
     return new Vector3(this);
   }
 
+  this.SquareMagnitude = function()
+  {
+    return this.x * this.x + this.y * this.y + this.z * this.z;
+  }
+
   this.Magnitude = function()
   {
     return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+  }
+
+  this.Normalized = function()
+  {
+    var n = 1.0 / this.Magnitude();
+    return Mult(this, n);
   }
 
   // Given vectors v and u, creates a matrix V such that Mult(V,u) = Cross(v,u)
@@ -64,6 +75,16 @@ Vector3.Zero = function()
   return new Vector3();
 }
 
+Vector3.Right = function()
+{
+  return new Vector3(1, 0, 0);
+}
+
+Vector3.Up = function()
+{
+  return new Vector3(0, 1, 0);
+}
+
 Vector3.Dot = function(u, v)
 {
   return u.x * v.x + u.y * v.y + u.z * v.z;
@@ -81,6 +102,46 @@ Vector3.Distance = function(u, v)
 {
   var delta = Sub(u, v);
   return Math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+}
+
+
+/*
+ * Ray:
+ *
+ * Describes a 3D ray.
+ */
+
+function Ray(from, direction)
+{
+  this.from = from.Copy();
+  this.direction = direction.Normalized();
+}
+
+
+/*
+ * Plane:
+ *
+ * A 3D plane.
+ */
+
+function Plane(position, normal)
+{
+  this.position = position.Copy();
+  this.normal = normal.Normalized();
+
+  // Finds the intersection point of the line described by the ray and the
+  // plane or undefined if there is none
+  this.Intersection = function(ray)
+  {
+    var denom = Vector3.Dot(this.normal, ray.direction);
+    if (denom == 0)
+    {
+      return undefined;
+    }
+    var num = Vector3.Dot(Sub(this.position, ray.from), this.normal);
+    var t = num / denom;
+    return Add(ray.from, Mult(t, ray.direction));
+  }
 }
 
 

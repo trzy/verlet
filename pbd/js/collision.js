@@ -100,18 +100,34 @@ function AARectangleCollider(center, width, height)
     new ColliderSegment(bottomRight, bottomLeft, Mult(Vector3.Up(), -1)), // bottom side
     new ColliderSegment(bottomLeft, topLeft, Mult(Vector3.Right(), -1))   // left side
   ];
+
+  var minX = topLeft.x;
+  var maxX = topRight.x;
+  var minY = bottomLeft.y;
+  var maxY = topLeft.y;
+
+  this.Contains = function(point)
+  {
+    return point.x > minX && point.x < maxX && point.y > minY && point.y < maxY;
+  }
 }
 
 AARectangleCollider.prototype = new Collider();
 
 AARectangleCollider.prototype.RayCast = function(from, to)
 {
+  // Fast rejection by testing whether ray ends inside the collider
+  if (!this.Contains(to))
+  {
+    return { intersected: false, point: undefined, normal: undefined, distance: undefined };
+  }
+
+  // Test all 4 sides and take the nearest position, if any
   var ray = new Ray(from, Sub(to, from));
   var bestPoint = undefined;
   var bestNormal = undefined;
   var bestDistance = Infinity;
 
-  // Test all 4 sides and take the nearest position, if any
   for (let surface of this.surfaces)
   {
     var point = surface.RayCast(from, to);

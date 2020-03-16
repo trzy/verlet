@@ -40,7 +40,8 @@ function Engine(physicsSystem)
 
     // Update physics
     var timeStep = 1 / 60;
-    var deltaTime = 1e-3 * (now - m_lastFrameTimeMS) + m_timeLeftOverLastFrame;
+    var timeSinceLastFrameMS = Math.min(1000, now - m_lastFrameTimeMS); // clamp to handle case where we hide tab and too much time elapses
+    var deltaTime = 1e-3 * timeSinceLastFrameMS + m_timeLeftOverLastFrame;
     var numWholeSteps = Math.floor(deltaTime / timeStep);
     m_timeLeftOverLastFrame = deltaTime - numWholeSteps * timeStep;
 

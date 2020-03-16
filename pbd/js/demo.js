@@ -238,7 +238,7 @@ function Demo()
   OnCreationOperationListChanged(); // pick up initial value
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
-  CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
+  //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
   g_engine.Start(OnUpdateComplete);
   g_engine.physicsEnabled = true;
 }

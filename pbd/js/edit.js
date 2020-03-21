@@ -279,12 +279,13 @@ CreateCollisionProbeOperation.prototype.Draw = function(ctx)
       if (result.intersected)
       {
         // Draw a blue normal from the intersection point
+        var normalLength = 32;
         ctx.beginPath();
         ctx.moveTo(result.point.x, ctx.canvas.height - result.point.y);
-        ctx.lineTo(result.point.x + result.normal.x, ctx.canvas.height - (result.point.y + result.normal.y));
+        ctx.lineTo(result.point.x + normalLength * result.normal.x, ctx.canvas.height - (result.point.y + normalLength * result.normal.y));
         ctx.lineWidth = 1;
         ctx.strokeStyle = "#00f";
-        ctx.fill();
+        ctx.stroke();
 
         // Draw a green dot at intersection point
         ctx.beginPath();

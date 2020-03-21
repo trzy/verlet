@@ -5,7 +5,6 @@
  * Main program.
  */
 
-//TODO: rigid box and colliders?
 
 var g_gravity = 1200;
 var g_physics = new PBDSystem();
@@ -13,12 +12,47 @@ var g_engine = new Engine(g_physics);
 var g_currentOperation = new EditOperation();
 var g_currentEditedBody = null;
 
-function CreateRope(x, y, length, numSegments)
+
+function CreateBox(center, size)
+{
+  var box = new Body();
+  g_physics.AddBody(box);
+
+  var topLeft = new Vertex(center.x - 0.5 * size.x, center.y + 0.5 * size.y, 1);
+  var topRight = new Vertex(center.x + 0.5 * size.x, center.y + 0.5 * size.y, 1);
+  var bottomRight = new Vertex(center.x + 0.5 * size.x, center.y - 0.5 * size.y, 1);
+  var bottomLeft = new Vertex(center.x - 0.5 * size.x, center.y - 0.5 * size.y, 1);
+  box.AddVertex(topLeft);
+  box.AddVertex(topRight);
+  box.AddVertex(bottomRight);
+  box.AddVertex(bottomLeft);
+
+  var kStiffness = 1
+
+  // Perimeter constraints
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, topLeft, topRight, Vector3.Distance(topLeft.Position(), topRight.Position())));
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, bottomLeft, bottomRight, Vector3.Distance(bottomLeft.Position(), bottomRight.Position())));
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, topLeft, bottomLeft, Vector3.Distance(topLeft.Position(), bottomLeft.Position())));
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, topRight, bottomRight, Vector3.Distance(topRight.Position(), bottomRight.Position())));
+
+  // Inner constraints to make box rigid
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, topLeft, bottomRight, Vector3.Distance(topLeft.Position(), bottomRight.Position())));
+  g_physics.AddConstraint(new DistanceConstraint(kStiffness, topRight, bottomLeft, Vector3.Distance(topRight.Position(), bottomLeft.Position())));
+
+  // Gravity
+  for (let vertex of box.Vertices())
+  {
+    vertex.AddForce(0, -g_gravity * vertex.mass);
+  }
+}
+
+function CreateRope(start, dir, length, numSegments, anchored)
 {
   var rope = new Body();
   g_physics.AddBody(rope);
 
-  var anchor = new AnchorVertex(x, y, 1);
+  var anchor = anchored ? new AnchorVertex(start.x, start.y, 1) : new Vertex(start.x, start.y, 1);
+  anchor.AddForce(0, -g_gravity * anchor.mass);
   rope.AddVertex(anchor);
 
   // Create N bodies
@@ -26,14 +60,11 @@ function CreateRope(x, y, length, numSegments)
   var segmentLength = length / numSegments;
   for (var i = 0; i < numSegments; i++)
   {
-    var vertex = new Vertex(x + (i + 1) * segmentLength, y, 1);
+    var vertex = new Vertex(start.x + (i + 1) * dir.x * segmentLength, start.y + (i + 1) * dir.y * segmentLength, 1);
     vertex.AddForce(0, -g_gravity * vertex.mass);
     rope.AddVertex(vertex);
     segments.push(vertex);
   }
-
-  // Make the end of the rope heavy
-  segments[segments.length - 1].SetMass(10);
 
   // Create N constraints: 1 external (the first one), N-1 internal
   var kStiffness = 1;
@@ -41,7 +72,7 @@ function CreateRope(x, y, length, numSegments)
   {
     var vertex1 = segments[i + 0];
     var vertex2 = segments[i + 1];
-    var distance = Math.abs(vertex1.Position().x - vertex2.Position().x);
+    var distance = Vector3.Distance(vertex1.Position(), vertex2.Position());
     var constraint = new DistanceConstraint(kStiffness, vertex1, vertex2, distance);
     g_physics.AddConstraint(constraint);
   }
@@ -101,6 +132,17 @@ function CreateFabric(x, y, width, height, numSegmentsX, numSegmentsY)
   }
 }
 
+function CreateFallingRopeAndBoxCollider(boxCenter, boxSize, ropeHeightAboveBoxCenter, ropeWidth, numSegments)
+{
+  var box = new AARectangleCollider(boxCenter, boxSize.x, boxSize.y);
+  g_physics.AddCollider(box);
+
+  var ropeStart = boxCenter.Copy();
+  ropeStart.x -= ropeWidth * 0.5;
+  ropeStart.y += ropeHeightAboveBoxCenter;
+  CreateRope(ropeStart, Vector3.Right(), ropeWidth, numSegments, false);
+}
+
 function CreateNewBody()
 {
   if (g_currentEditedBody)
@@ -154,7 +196,7 @@ function OnUpdateComplete(ctx)
 {
   // Current operation
   g_currentOperation.Draw(ctx);
-  
+
   // Update settings
   g_physics.persistCollisionConstraints = $("#PersistCollisionConstraints").prop("checked");
 }
@@ -258,8 +300,20 @@ function Demo()
   OnDampingChanged();
 
   var canvas = document.getElementById("Viewport");
-  CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
+
+  // Swinging rope
+  CreateRope(new Vector3(canvas.width / 4, canvas.height * 0.74, 0), Vector3.Right(), 300, 30, true);
+
+  // Fabric
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
+
+  // Falling rope and colliding box. Rope should wrap around the sides of box.
+  var boxCenter = new Vector3(0.6 * canvas.width, canvas.height * 0.3, 0);
+  var boxSize = new Vector3(0.2 * canvas.height, 0.15 * canvas.width, 0);
+  CreateFallingRopeAndBoxCollider(boxCenter, boxSize, 0.4 * canvas.height, 0.3 * canvas.width, 20);
+
+  // Faling box
+  CreateBox(new Vector3(boxCenter.x + 60, boxCenter.y + 500, 0), new Vector3(100, 100, 0));
 
   g_engine.Start(OnUpdateComplete);
   g_engine.physicsEnabled = true;

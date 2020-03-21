@@ -25,6 +25,7 @@ function Vertex(x, y, mass)
   this.v = Vector3.Zero();
   this.mass = mass;
   this.w = 1.0 / mass;
+  this.collisionConstraint = null;
   this.fillColor = Vertex.defaultFillColor;
   this.strokeColor = Vertex.defaultStrokeColor;
 }
@@ -134,6 +135,7 @@ function AnchorVertex(x, y)
   this.v = Vector3.Zero();
   this.mass = Infinity;
   this.w = 0;
+  this.collisionConstraint = null;
 }
 
 AnchorVertex.prototype = new Vertex();
@@ -453,16 +455,18 @@ function PBDSystem()
 
   function GenerateCollisionConstraints()
   {
-    if (!self.persistCollisionConstraints)
-    {
-      // Clear out collision constraints generated last frame
-      m_collisionConstraints = [];
-    }
+    var collisionConstraints = [];
 
     for (let body of m_bodies)
     {
       for (let vertex of body.Vertices())
       {
+        if (!self.persistCollisionConstraints)
+        {
+          // Reset collision constraints each frame if this setting enabled
+          vertex.collisionConstraint = null;
+        }
+
         var from = vertex.x;
         var to = vertex.p;
 
@@ -475,15 +479,24 @@ function PBDSystem()
           return a.distance - b.distance;
         });
 
-        // If there is a collision, generate the collider constraint
+        // If there is a collision, generate the collider constraint (over-
+        // writing any existing one) and attach it to the vertex
         if (collisions.length > 0)
         {
           var collision = collisions[0];
           var constraint = new CollisionConstraint(vertex, collision.point, collision.normal);
-          m_collisionConstraints.push(constraint);
+          vertex.collisionConstraint = constraint;
+        }
+
+        // Add vertex constraint to list of collision constraints
+        if (vertex.collisionConstraint)
+        {
+          collisionConstraints.push(vertex.collisionConstraint);
         }
       }
     }
+
+    return collisionConstraints;
   }
 
   this.Update = function(timeStep)
@@ -509,9 +522,9 @@ function PBDSystem()
       }
     }
 
-    GenerateCollisionConstraints();
+    var collisionConstraints = GenerateCollisionConstraints();
 
-    var constraints = m_constraints.slice().concat(m_collisionConstraints);
+    var constraints = m_constraints.slice().concat(collisionConstraints);
     constraints.sort((a, b) =>
     {
       // Higher priority (lower number) pushed to end of array

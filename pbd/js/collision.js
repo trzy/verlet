@@ -81,6 +81,17 @@ function ColliderSegment(start, end, normal)
     }
     return undefined;
   }
+
+  this.NearestPoint = function(aPoint)
+  {
+    var segmentDir = Sub(this.end, this.start);
+    var segmentLength = segmentDir.Magnitude();
+    var segmentDirNorm = Mult(segmentDir, 1.0 / segmentLength);
+    var v = Sub(aPoint, this.start);
+    var d = Vector3.Dot(v, segmentDirNorm);
+    var t = Math.min(Math.max(d, 0), segmentLength);
+    return Add(this.start, Mult(segmentDirNorm, t));
+  }
 }
 
 
@@ -160,9 +171,8 @@ AARectangleCollider.prototype.RayCast = function(from, to)
   {
     // Both points are inside the collider. Collision detection has failed. In
     // this case, fall back to static collision detection: look for the nearest
-    // point on the collider surface to the initial motion point ("from"). The
-    // complete line formed by the motion is used to test for intersections.
-    TestSurface = function(surface) { return surface.LineIntersection(from, to) }
+    // point on the collider surface to the initial motion point ("from").
+    TestSurface = function(surface) { return surface.NearestPoint(from) }
   }
   else
   {

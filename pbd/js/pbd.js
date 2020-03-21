@@ -453,11 +453,11 @@ function PBDSystem()
 
   function GenerateCollisionConstraints()
   {
-    // Clear out collision constraints generated last frame
-    //TODO: we need to handle case where collision is not resolved. This requires static
-    // collision detection. Or, maybe perform a follow-up test to determine whether constraint
-    // can be removed?
-    m_collisionConstraints = [];
+    if (!self.persistCollisionConstraints)
+    {
+      // Clear out collision constraints generated last frame
+      m_collisionConstraints = [];
+    }
 
     for (let body of m_bodies)
     {

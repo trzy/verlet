@@ -154,6 +154,9 @@ function OnUpdateComplete(ctx)
 {
   // Current operation
   g_currentOperation.Draw(ctx);
+  
+  // Update settings
+  g_physics.persistCollisionConstraints = $("#PersistCollisionConstraints").prop("checked");
 }
 
 function OnPauseButtonPressed()
@@ -212,6 +215,19 @@ function OnCreationOperationListChanged()
   }
 }
 
+function OnIterationsChanged()
+{
+  var value = $("#Iterations").val();
+  value = Math.floor(Math.min(Math.max(value, 1), 25));
+  $("#Iterations").val(value);
+  g_physics.physicsSolverIterations = value;
+}
+
+function OnDampingChanged()
+{
+  g_physics.kDamping = parseFloat($("#Damping").val());
+}
+
 function Demo()
 {
   /*
@@ -236,9 +252,15 @@ function Demo()
   $("#NewBodyButton").click(OnNewBodyButtonPressed);
   $("#CreationOperation").change(OnCreationOperationListChanged);
   OnCreationOperationListChanged(); // pick up initial value
+  $("#Iterations").change(OnIterationsChanged);
+  OnIterationsChanged();
+  $("#Damping").change(OnDampingChanged);
+  OnDampingChanged();
+
   var canvas = document.getElementById("Viewport");
   CreateRope(canvas.width /4, canvas.height * 0.74, 300, 30);
   //CreateFabric(canvas.width / 2, canvas.height * 0.80, 500, 400, 30, 20);
+
   g_engine.Start(OnUpdateComplete);
   g_engine.physicsEnabled = true;
 }

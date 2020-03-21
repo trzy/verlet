@@ -13,6 +13,9 @@ function ColliderSegment(start, end, normal)
   this.end = end.Copy();
   this.normal = normal.Normalized();
 
+  // Finds the point on the ray, between "to" and "from", that intersects this
+  // line segment *and* enters from the side facing away from the normal
+  // direction. Otherwise, returns undefined.
   this.RayCast = function(from, to)
   {
     var direction = Sub(to, from);
@@ -33,6 +36,35 @@ function ColliderSegment(start, end, normal)
     var rayFromPoint = Sub(to, point);
     var rayFromPointLength = rayFromPoint.Magnitude();
     if (rayFromPointLength > segmentLength || Vector3.Dot(this.normal, direction) > 0)
+    {
+      return undefined;
+    }
+
+    // We have an intersection point with the plane. Check if it is within the
+    // bounds of the line segment start -> end.
+    var left = this.start.x < this.end.x ? this.start.x : this.end.x;
+    var right = this.start.x < this.end.x ? this.end.x : this.start.x;
+    var top = this.start.y < this.end.y ? this.end.y : this.start.y;
+    var bottom = this.start.y < this.end.y ? this.start.y : this.end.y;
+    if (point.x >= left && point.x <= right && point.y <= top && point.y >= bottom)
+    {
+      return point;
+    }
+    return undefined;
+  }
+
+  // Finds the intersection point, if one exists, between the line formed by
+  // the two points "from" and "to", and the segment. An infinitely long line
+  // is tested against the finite segment and the intersection may lie outside
+  // the two points. If no intersection exists, undefined is returned.
+  this.LineIntersection = function(from, to)
+  {
+    var direction = Sub(to, from);
+    var ray = new Ray(from, direction);
+
+    var plane = new Plane(this.start, this.normal);
+    var point = plane.Intersection(ray);
+    if (point == undefined)
     {
       return undefined;
     }
@@ -116,10 +148,27 @@ AARectangleCollider.prototype = new Collider();
 
 AARectangleCollider.prototype.RayCast = function(from, to)
 {
-  // Fast rejection by testing whether ray ends inside the collider
   if (!this.Contains(to))
   {
+    // Fast rejection by testing whether ray ends inside the collider
     return { intersected: false, point: undefined, normal: undefined, distance: undefined };
+  }
+
+  var TestSurface;
+
+  if (this.Contains(from))
+  {
+    // Both points are inside the collider. Collision detection has failed. In
+    // this case, fall back to static collision detection: look for the nearest
+    // point on the collider surface to the initial motion point ("from"). The
+    // complete line formed by the motion is used to test for intersections.
+    TestSurface = function(surface) { return surface.LineIntersection(from, to) }
+  }
+  else
+  {
+    // The motion path enters the collider. Use a directional ray cast to find
+    // the intersection point if it lies between "from" and "to".
+    TestSurface = function(surface) { return surface.RayCast(from, to) };
   }
 
   // Test all 4 sides and take the nearest position, if any
@@ -130,7 +179,7 @@ AARectangleCollider.prototype.RayCast = function(from, to)
 
   for (let surface of this.surfaces)
   {
-    var point = surface.RayCast(from, to);
+    var point = TestSurface(surface);
     if (point)
     {
       var distance = Vector3.Distance(point, from);

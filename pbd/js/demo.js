@@ -198,20 +198,20 @@ function OnUpdateComplete(ctx)
   g_currentOperation.Draw(ctx);
 }
 
-function OnPauseButtonPressed()
+function OnRunButtonPressed()
 {
   if (g_engine.physicsEnabled)
   {
     // Pause pressed
     $("#StepButton").prop("disabled", false);
-    $("#PauseButton").html("Resume");
+    $("#RunButton").html("Resume");
     g_engine.physicsEnabled = false;
   }
   else
   {
-    // Resume pressed
+    // Resume (or initially, Start) pressed
     $("#StepButton").prop("disabled", true);
-    $("#PauseButton").html("Pause");
+    $("#RunButton").html("Pause");
     g_engine.physicsEnabled = true;
   }
 }
@@ -286,7 +286,7 @@ function Demo()
   $("#Viewport").mousemove(OnMouseMove);
   $("#Viewport").mousedown(OnMouseDown);
   $("#Viewport").mouseup(OnMouseUp);
-  $("#PauseButton").click(OnPauseButtonPressed);
+  $("#RunButton").click(OnRunButtonPressed);
   $("#StepButton").click(OnStepButtonPressed);
   $("#NewBodyButton").click(OnNewBodyButtonPressed);
   $("#CreationOperation").change(OnCreationOperationListChanged);
@@ -313,5 +313,5 @@ function Demo()
   CreateBox(new Vector3(boxCenter.x + 60, boxCenter.y + 500, 0), new Vector3(100, 100, 0));
 
   g_engine.Start(OnUpdateComplete);
-  g_engine.physicsEnabled = true;
+  g_engine.physicsEnabled = false;
 }

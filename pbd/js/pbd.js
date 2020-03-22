@@ -390,7 +390,6 @@ function PBDSystem()
 
   var m_bodies = [];
   var m_constraints = [];
-  var m_collisionConstraints = [];
   var m_colliders = [];
   var m_physicsTimeElapsed = 0;
 

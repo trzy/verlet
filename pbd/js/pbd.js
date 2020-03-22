@@ -463,12 +463,12 @@ function PBDSystem()
         var from = vertex.x;
         var to = vertex.p;
 
-        // Get possible collision points in descending order of distance from
+        // Get possible collision points in ascending order of distance from
         // vertex position before velocity update
         var collisions = m_colliders.map(collider => collider.RayCast(from, to)).filter(collision => collision.intersected);
         collisions.sort((a, b) =>
         {
-          // Sort descending order of distance
+          // Sort ascending order of distance
           return a.distance - b.distance;
         });
 

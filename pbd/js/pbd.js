@@ -461,12 +461,6 @@ function PBDSystem()
     {
       for (let vertex of body.Vertices())
       {
-        if (!self.persistCollisionConstraints)
-        {
-          // Reset collision constraints each frame if this setting enabled
-          vertex.collisionConstraint = null;
-        }
-
         var from = vertex.x;
         var to = vertex.p;
 
@@ -479,19 +473,13 @@ function PBDSystem()
           return a.distance - b.distance;
         });
 
-        // If there is a collision, generate the collider constraint (over-
-        // writing any existing one) and attach it to the vertex
+        // If there is a collision, add a collider constraint for the nearest
+        // collision intersection
         if (collisions.length > 0)
         {
           var collision = collisions[0];
           var constraint = new CollisionConstraint(vertex, collision.point, collision.normal);
-          vertex.collisionConstraint = constraint;
-        }
-
-        // Add vertex constraint to list of collision constraints
-        if (vertex.collisionConstraint)
-        {
-          collisionConstraints.push(vertex.collisionConstraint);
+          collisionConstraints.push(constraint);
         }
       }
     }

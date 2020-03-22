@@ -196,9 +196,6 @@ function OnUpdateComplete(ctx)
 {
   // Current operation
   g_currentOperation.Draw(ctx);
-
-  // Update settings
-  g_physics.persistCollisionConstraints = $("#PersistCollisionConstraints").prop("checked");
 }
 
 function OnPauseButtonPressed()

@@ -151,7 +151,10 @@ function AARectangleCollider(center, width, height)
 
   this.Contains = function(point)
   {
-    return point.x > minX && point.x < maxX && point.y > minY && point.y < maxY;
+    // >= and <= rather than > and < in order to generate static collision
+    // constraints and prevent oscillations caused by a vertex repeatedly
+    // entering and existing a collider due to constraint projection
+    return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
   }
 }
 
@@ -159,9 +162,9 @@ AARectangleCollider.prototype = new Collider();
 
 AARectangleCollider.prototype.RayCast = function(from, to)
 {
-  if (!this.Contains(to))
+  if (!this.Contains(to) && !this.Contains(from))
   {
-    // Fast rejection by testing whether ray ends inside the collider
+    // Fast rejection when both ray points are outside of the collider
     return { intersected: false, point: undefined, normal: undefined, distance: undefined };
   }
 
@@ -169,15 +172,41 @@ AARectangleCollider.prototype.RayCast = function(from, to)
 
   if (this.Contains(from))
   {
-    // Both points are inside the collider. Collision detection has failed. In
-    // this case, fall back to static collision detection: look for the nearest
-    // point on the collider surface to the initial motion point ("from").
+    //
+    // Static collision.
+    //
+    // Starting point is inside or on surface of the collider. Collision
+    // detection has failed. In this case, fall back to static collision
+    // detection: look for the nearest point on the collider surface to the
+    // initial motion point ("from").
+    //
+    // Note: Paper mentions this is necessary when *both* ray points are
+    // inside the collider. To replicate that logic, we would fast-reject
+    // only on "to" being outside the collider, which would mean *both*
+    // points are inside the collider if we arrive here. However, this
+    // creates oscillations in the case of a rope hugging a box corner:
+    //
+    //   +--o---- ...
+    //   |+-----
+    //   ||
+    // v o|
+    //    |
+    //
+    // Vertex v would oscillate. To prevent this, we want to generate the
+    // static collision constraint using NearestPoint whenever the starting
+    // point is just touching the surface (and might move inside it because
+    // of constraint projection).
+    //
     TestSurface = function(surface) { return surface.NearestPoint(from) }
   }
   else
   {
+    //
+    // Continuous collision.
+    //
     // The motion path enters the collider. Use a directional ray cast to find
     // the intersection point if it lies between "from" and "to".
+    //
     TestSurface = function(surface) { return surface.RayCast(from, to) };
   }
 

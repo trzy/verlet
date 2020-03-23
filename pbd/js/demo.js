@@ -190,6 +190,10 @@ function OnMouseDown(event)
 
 function OnMouseUp(event)
 {
+  var canvas = document.getElementById("Viewport");
+  var x = event.offsetX;
+  var y = canvas.height - event.offsetY;
+  g_currentOperation.OnMouseUp(x, y);
 }
 
 function OnUpdateComplete(ctx)
@@ -231,7 +235,11 @@ function OnCreationOperationListChanged()
   g_currentOperation.Cancel();
 
   var operation = $("#CreationOperation").val();
-  if (operation == "Vertex")
+  if (operation == "Move")
+  {
+    g_currentOperation = new MoveVertexOperation(g_physics);
+  }
+  else if (operation == "Vertex")
   {
     if (!g_currentEditedBody)
     {

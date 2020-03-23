@@ -21,7 +21,82 @@ function EditOperation()
 EditOperation.prototype.Draw = function(ctx) {}
 EditOperation.prototype.OnMouseMove = function(x, y) {}
 EditOperation.prototype.OnMouseDown = function(x, y) {}
+EditOperation.prototype.OnMouseUp = function(x, y) {}
 EditOperation.prototype.Cancel = function() {}
+
+
+/*
+ * MoveVertexOperation:
+ *
+ * Allows vertices to be selected and moved by clicking and dragging.
+ */
+
+function MoveVertexOperation(physics)
+{
+  this.physics = physics;
+  this.cursor = Vector3.Zero();
+  this.highlightedVertex = null;
+  this.isSelected = false;
+}
+
+MoveVertexOperation.prototype = new EditOperation();
+
+MoveVertexOperation.prototype.Draw = function(ctx)
+{
+  // Draw highlighted vertex
+  if (this.highlightedVertex)
+  {
+    var pos = this.highlightedVertex.Position();
+    ctx.beginPath();
+    ctx.arc(pos.x, ctx.canvas.height - pos.y, 4, 0, 360);
+    ctx.fillStyle = "#88f";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#000";
+    ctx.stroke();
+  }
+}
+
+MoveVertexOperation.prototype.OnMouseMove = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+  if (!this.isSelected)
+  {
+    this.highlightedVertex = this.physics.FindVertexAt(x, y);
+  }
+  else
+  {
+    // Update selected vertex position
+    this.highlightedVertex.SetPosition(this.cursor);
+    this.highlightedVertex.SetVelocity(Vector3.Zero());
+  }
+}
+
+MoveVertexOperation.prototype.OnMouseDown = function(x, y)
+{
+  this.cursor = new Vector3(x, y, 0);
+
+  if (!this.isSelected)
+  {
+    var vertex = this.highlightedVertex;
+    if (vertex)
+    {
+      // Clicked on a vertex
+      this.isSelected = true;
+    }
+  }
+}
+
+MoveVertexOperation.prototype.OnMouseUp = function(x, y)
+{
+  this.Cancel();
+}
+
+MoveVertexOperation.prototype.Cancel = function()
+{
+  this.highlightedVertex = null;
+  this.isSelected = false;
+}
 
 
 /*

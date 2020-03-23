@@ -31,7 +31,7 @@ function Vertex(x, y, mass)
 }
 
 Vertex.defaultFillColor = "#fff";
-Vertex.defaultStrokeColor = "000";
+Vertex.defaultStrokeColor = "#000";
 
 Vertex.prototype.Position = function()
 {

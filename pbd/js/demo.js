@@ -234,6 +234,8 @@ function OnCreationOperationListChanged()
 {
   g_currentOperation.Cancel();
 
+  $("#ConstraintStiffness").hide();
+
   var operation = $("#CreationOperation").val();
   if (operation == "Move")
   {
@@ -250,6 +252,7 @@ function OnCreationOperationListChanged()
   }
   else if (operation == "Constraint")
   {
+    $("#ConstraintStiffness").show();
     g_currentOperation = new CreateConstraintOperation(g_physics);
   }
   else if (operation == "AARectangleCollider")

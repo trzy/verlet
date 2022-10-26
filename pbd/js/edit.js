@@ -138,7 +138,6 @@ CreateVertexOperation.prototype.OnMouseDown = function(x, y)
 function CreateConstraintOperation(physics)
 {
   this.physics = physics;
-  this.k = 1;
   this.cursor = Vector3.Zero();
   this.highlightedVertex = null;
   this.vertex1 = null;
@@ -151,7 +150,8 @@ function CreateConstraintOperation(physics)
       return;
     }
 
-    var constraint = new DistanceConstraint(this.k, this.vertex1, this.vertex2, Vector3.Distance(this.vertex1.Position(), this.vertex2.Position()));
+    var k = parseFloat($("#Damping").val());
+    var constraint = new DistanceConstraint(k, this.vertex1, this.vertex2, Vector3.Distance(this.vertex1.Position(), this.vertex2.Position()));
     this.physics.AddConstraint(constraint);
     this.vertex1 = null;
     this.vertex2 = null;
